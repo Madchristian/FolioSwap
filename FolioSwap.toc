@@ -16,3 +16,4 @@ Core\Player.lua
 Core\Reporter.lua
 Core\Actions.lua
 Core\SwapController.lua
+UI\SlashCommands.lua
