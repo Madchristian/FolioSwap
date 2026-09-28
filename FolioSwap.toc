@@ -10,3 +10,4 @@ Locales\enUS.lua
 Locales\deDE.lua
 Core\Util.lua
 Core\FolioApi.lua
+Core\Presets.lua
