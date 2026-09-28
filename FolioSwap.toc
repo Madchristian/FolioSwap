@@ -14,3 +14,4 @@ Core\Presets.lua
 Core\ProfileStore.lua
 Core\Player.lua
 Core\Reporter.lua
+Core\Actions.lua
