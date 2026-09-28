@@ -79,6 +79,7 @@ end
 -- Skip-Gründe: "unknown" | "locked" | "unpurchased" | "rejected".
 -- CommitConfig() == true heißt nur "vom Spiel angenommen" – das endgültige Ergebnis kommt
 -- asynchron über das Event TRAIT_CONFIG_UPDATED.
+-- Nach einem RollbackConfig ist applied wieder leer: zurückgerollt heißt nichts übernommen.
 function folio_api.apply(selections)
   local result = { applied = {}, skipped = {} }
   local config_id = current_config_id()
@@ -108,6 +109,7 @@ function folio_api.apply(selections)
   if #result.applied > 0 and not C_Traits.CommitConfig(config_id) then
     C_Traits.RollbackConfig(config_id)
     result.reason = "commit_failed"
+    result.applied = {}
   end
   return result
 end
