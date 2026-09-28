@@ -1,0 +1,8 @@
+## Interface: 120100
+## Title: FolioSwap
+## Notes: Switches your Omnium Folio runes automatically per specialization.
+## Notes-deDE: Stellt die Runen des Omniumfolianten automatisch pro Spezialisierung um.
+## Author: Madchristian
+## Version: @project-version@
+## SavedVariables: FolioSwapDB
+
