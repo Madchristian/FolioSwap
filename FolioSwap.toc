@@ -17,3 +17,5 @@ Core\Reporter.lua
 Core\Actions.lua
 Core\SwapController.lua
 UI\SlashCommands.lua
+UI\FolioPanel.lua
+Core\Bootstrap.lua
