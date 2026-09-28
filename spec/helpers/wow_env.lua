@@ -19,6 +19,7 @@ local function addon_files()
 end
 
 -- opts: tree (Foliant-Mock), locale, spec_id, presets
+-- Letzter Aufruf gewinnt: die Mock-Globals zeigen auf die neueste Umgebung, ältere envs danach nicht mehr verwenden.
 function wow_env.new(opts)
   opts = opts or {}
   local env = { in_combat = false, spec_id = opts.spec_id or 62, messages = {} }

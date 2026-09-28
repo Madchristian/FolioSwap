@@ -19,7 +19,7 @@ function c_traits_mock.install(tree)
   local state = { set_calls = {}, commits = 0, commit_ok = true, reject = {} }
   local by_id, node_ids = {}, {}
   for _, node in ipairs(tree.nodes) do
-    by_id[node.id] = node
+    by_id[node.id] = { id = node.id, entries = node.entries, active = node.active, available = node.available }
     node_ids[#node_ids + 1] = node.id
   end
 
@@ -30,7 +30,8 @@ function c_traits_mock.install(tree)
     GetTreeNodes = function(tree_id)
       return tree_id == 1186 and node_ids or {}
     end,
-    GetNodeInfo = function(_, node_id)
+    GetNodeInfo = function(config_id, node_id)
+      assert(config_id == tree.config_id, "falsche config_id")
       local node = by_id[node_id]
       return {
         ID = node_id,
@@ -39,19 +40,22 @@ function c_traits_mock.install(tree)
         isAvailable = node.available ~= false,
       }
     end,
-    GetEntryInfo = function(_, entry_id)
+    GetEntryInfo = function(config_id, entry_id)
+      assert(config_id == tree.config_id, "falsche config_id")
       return { definitionID = entry_id * 10 }
     end,
     GetDefinitionInfo = function(definition_id)
       return { spellID = definition_id * 10 }
     end,
-    SetSelection = function(_, node_id, entry_id)
+    SetSelection = function(config_id, node_id, entry_id)
+      assert(config_id == tree.config_id, "falsche config_id")
       table.insert(state.set_calls, { node_id, entry_id })
       if state.reject[node_id] then return false end
       by_id[node_id].active = entry_id
       return true
     end,
-    CommitConfig = function()
+    CommitConfig = function(config_id)
+      assert(config_id == tree.config_id, "falsche config_id")
       state.commits = state.commits + 1
       return state.commit_ok
     end,
