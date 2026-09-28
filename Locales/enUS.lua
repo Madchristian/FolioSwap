@@ -1,0 +1,38 @@
+local _, ns = ...
+
+-- Fehlende Schlüssel liefern den Schlüssel selbst, damit nie nil im Chat landet.
+local L = setmetatable({}, { __index = function(_, key) return key end })
+ns.L = L
+
+L.prefix = "|cff66ccffFolioSwap|r: "
+L.applied = "Profile \"%s\" applied (%d rune(s) changed)."
+L.unchanged = "Profile \"%s\" is already active in the Omnium Folio."
+L.skipped = "%d rune(s) of \"%s\" skipped: %s"
+L.reason_unknown = "unknown rune (patch?)"
+L.reason_locked = "row still locked"
+L.reason_rejected = "rejected by the game"
+L.unavailable = "Omnium Folio not unlocked – nothing switched."
+L.commit_failed = "Could not save the Omnium Folio changes."
+L.combat_pending = "In combat – the Omnium Folio switches after combat."
+L.in_combat = "Not possible in combat."
+L.no_spec = "No specialization active."
+L.saved = "Profile \"%s\" saved."
+L.deleted = "Profile \"%s\" deleted."
+L.activated = "Profile \"%s\" is now active for this specialization."
+L.not_found = "No profile \"%s\" for this specialization."
+L.preset_readonly = "Guide preset \"%s\" can't be changed."
+L.preset_name = "\"%s\" is the name of a guide preset."
+L.empty_name = "Please enter a name."
+L.no_profiles = "No profiles for this specialization."
+L.list_header = "Profiles for this specialization:"
+L.active_marker = " (active)"
+L.preset_marker = " [Guide]"
+L.dump_saved = "%d rune row(s) written to FolioSwapDB.dump – saved on the next /reload."
+L.check_ok = "All guide presets match the current Omnium Folio."
+L.check_problem = "Preset \"%s\" (spec %d): node %d / entry %d not found."
+L.help = "/folio list | apply <name> | save <name> | delete <name> | active <name> | dump | check"
+L.panel_apply = "Apply"
+L.panel_save = "Save current…"
+L.panel_delete = "Delete"
+L.panel_activate = "Set active"
+L.save_prompt = "Name for the current Omnium Folio setup:"

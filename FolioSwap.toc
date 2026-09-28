@@ -6,3 +6,5 @@
 ## Version: @project-version@
 ## SavedVariables: FolioSwapDB
 
+Locales\enUS.lua
+Locales\deDE.lua
