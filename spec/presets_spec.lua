@@ -38,6 +38,12 @@ describe("presets", function()
     )
   end)
 
+  it("kopiert Selections, damit Aufrufer presets.data nicht verändern können", function()
+    local list = presets.for_spec(62)
+    list[1].selections[100] = 9999
+    assert.equals(1002, presets.data[62][1].selections[100])
+  end)
+
   it("ausgelieferte Presets haben pro Spec eindeutige, nicht leere Namen", function()
     for spec_id, list in pairs(wow_env.new().ns.presets.data) do
       local seen = {}

@@ -5,9 +5,11 @@ local function sample_presets()
 end
 
 describe("profile_store", function()
-  local store
+  local env, store, presets
   before_each(function()
-    store = wow_env.new({ presets = sample_presets() }).ns.profile_store
+    env = wow_env.new({ presets = sample_presets() })
+    store = env.ns.profile_store
+    presets = env.ns.presets
   end)
 
   it("legt fehlende Tabellen beim Init an", function()
@@ -42,12 +44,20 @@ describe("profile_store", function()
     assert.same({ false, "preset_name" }, { store.save(62, "Guide M+", {}) })
   end)
 
+  it("trimmt Namen beim Speichern und lehnt reine Leerzeichen ab", function()
+    assert.same({ false, "empty_name" }, { store.save(62, "   ", {}) })
+    assert.is_true(store.save(62, "  Mein  ", { [100] = 1001 }))
+    assert.equals("Mein", store.get(62, "Mein").name)
+    assert.is_nil(store.get(62, "  Mein  "))
+  end)
+
   it("löscht eigene Profile und setzt das aktive Profil zurück", function()
     store.save(62, "Mein", { [100] = 1001 })
     store.set_active(62, "Mein")
     assert.is_true(store.delete(62, "Mein"))
     assert.is_nil(store.get(62, "Mein"))
     assert.equals("Guide M+", store.active_name(62))
+    assert.is_nil(store.db.active[62])
   end)
 
   it("schützt Presets und meldet unbekannte Profile beim Löschen", function()
@@ -65,5 +75,33 @@ describe("profile_store", function()
     store.save(62, "Mein", { [100] = 1001 })
     assert.is_true(store.set_active(62, "Mein"))
     assert.equals("Mein", store.get_active(62).name)
+  end)
+
+  it("löst eine Namenskollision mit einem später ausgelieferten Preset beim Re-Init auf", function()
+    store.save(62, "Raid", { [100] = 1001 })
+    store.set_active(62, "Raid")
+    local list = presets.data[62]
+    list[#list + 1] = { name = "Raid", selections = { [100] = 1002 } }
+
+    local db = store.init(store.db)
+
+    assert.equals("user", store.get(62, "Raid (2)").source)
+    assert.equals("Raid (2)", db.active[62])
+    local seen = {}
+    for _, profile in ipairs(store.list(62)) do
+      assert.is_nil(seen[profile.name], "Doppelter Name " .. profile.name)
+      seen[profile.name] = true
+    end
+  end)
+
+  it("übersteht kaputte SavedVariables beim Init ohne Absturz", function()
+    local fresh = wow_env.new().ns.profile_store
+    local db = fresh.init({
+      profiles = { [62] = "kaputt", [63] = { X = { name = "X" } } },
+      active = { [62] = 5 },
+    })
+    assert.same({}, fresh.list(62))
+    assert.same({}, fresh.list(63))
+    assert.same({}, db.active)
   end)
 end)

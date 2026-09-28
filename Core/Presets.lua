@@ -11,7 +11,7 @@ presets.data = {}
 function presets.for_spec(spec_id)
   local profiles = {}
   for _, preset in ipairs(presets.data[spec_id] or {}) do
-    profiles[#profiles + 1] = { name = preset.name, source = "preset", selections = preset.selections }
+    profiles[#profiles + 1] = { name = preset.name, source = "preset", selections = util.copy(preset.selections) }
   end
   return profiles
 end
