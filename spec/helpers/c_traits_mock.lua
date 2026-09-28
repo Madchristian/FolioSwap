@@ -16,7 +16,10 @@ function c_traits_mock.default_tree()
 end
 
 function c_traits_mock.install(tree)
-  local state = { set_calls = {}, commits = 0, commit_ok = true, reject = {} }
+  local state = {
+    set_calls = {}, commits = 0, commit_ok = true, reject = {},
+    ready = true, can_edit = true, rollbacks = 0,
+  }
   local by_id, node_ids = {}, {}
   for _, node in ipairs(tree.nodes) do
     by_id[node.id] = { id = node.id, entries = node.entries, active = node.active, available = node.available }
@@ -47,6 +50,11 @@ function c_traits_mock.install(tree)
     GetDefinitionInfo = function(definition_id)
       return { spellID = definition_id * 10 }
     end,
+    IsReadyForCommit = function() return state.ready end,
+    CanEditConfig = function(config_id)
+      assert(config_id == tree.config_id, "falsche config_id")
+      return state.can_edit, state.can_edit and nil or "locked"
+    end,
     SetSelection = function(config_id, node_id, entry_id)
       assert(config_id == tree.config_id, "falsche config_id")
       table.insert(state.set_calls, { node_id, entry_id })
@@ -58,6 +66,11 @@ function c_traits_mock.install(tree)
       assert(config_id == tree.config_id, "falsche config_id")
       state.commits = state.commits + 1
       return state.commit_ok
+    end,
+    RollbackConfig = function(config_id)
+      assert(config_id == tree.config_id, "falsche config_id")
+      state.rollbacks = state.rollbacks + 1
+      return true
     end,
   }
   return state

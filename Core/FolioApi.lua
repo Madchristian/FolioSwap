@@ -15,7 +15,7 @@ end
 -- Nur Nodes mit echter Auswahl; die Reihe ohne Wahl (Rune of Lingering) fällt heraus.
 local function choice_nodes(config_id)
   local nodes = {}
-  for _, node_id in ipairs(C_Traits.GetTreeNodes(TREE_ID)) do
+  for _, node_id in ipairs(C_Traits.GetTreeNodes(TREE_ID) or {}) do
     local info = C_Traits.GetNodeInfo(config_id, node_id)
     if info and info.entryIDs and #info.entryIDs > 1 then
       nodes[node_id] = info
@@ -36,10 +36,16 @@ local function entry_name(config_id, entry_id)
 end
 
 -- Ergebnis: "applied", "unchanged" oder ein Grund zum Überspringen.
+-- Ein Tausch zwischen bereits gewählten Runen ist unabhängig von isAvailable erlaubt
+-- (wie Blizzards CanSelectChoice); nur der Erstkauf eines unbelegten Nodes wird nie
+-- ungefragt ausgelöst, weil er Foliant-Währung kostet.
 local function apply_selection(config_id, info, node_id, entry_id)
   if not info or not util.contains(info.entryIDs, entry_id) then return "unknown" end
   if active_entry_id(info) == entry_id then return "unchanged" end
-  if not info.isAvailable then return "locked" end
+  if not active_entry_id(info) then
+    if not info.isAvailable then return "locked" end
+    return "unpurchased"
+  end
   if C_Traits.SetSelection(config_id, node_id, entry_id) then return "applied" end
   return "rejected"
 end
@@ -68,11 +74,24 @@ function folio_api.catalog()
   return catalog
 end
 
+-- API-Vertrag: result = { applied = {node_id, ...}, skipped = {{node_id = ..., reason = ...}, ...},
+-- reason = nil | "unavailable" | "busy" | "cannot_edit" | "commit_failed" }.
+-- Skip-Gründe: "unknown" | "locked" | "unpurchased" | "rejected".
+-- CommitConfig() == true heißt nur "vom Spiel angenommen" – das endgültige Ergebnis kommt
+-- asynchron über das Event TRAIT_CONFIG_UPDATED.
 function folio_api.apply(selections)
   local result = { applied = {}, skipped = {} }
   local config_id = current_config_id()
   if not config_id then
     result.reason = "unavailable"
+    return result
+  end
+  if not C_Traits.IsReadyForCommit() then
+    result.reason = "busy"
+    return result
+  end
+  if not C_Traits.CanEditConfig(config_id) then
+    result.reason = "cannot_edit"
     return result
   end
 
@@ -87,6 +106,7 @@ function folio_api.apply(selections)
   end
 
   if #result.applied > 0 and not C_Traits.CommitConfig(config_id) then
+    C_Traits.RollbackConfig(config_id)
     result.reason = "commit_failed"
   end
   return result

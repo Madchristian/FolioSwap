@@ -58,12 +58,47 @@ describe("folio_api", function()
       { node_id = 500, reason = "locked" },
       { node_id = 777, reason = "unknown" },
     }, result.skipped)
+    assert.same({ { 200, 2002 } }, env.traits.set_calls)
     assert.equals(0, env.traits.commits)
   end)
 
-  it("meldet einen fehlgeschlagenen Commit", function()
+  it("kauft einen unbelegten, verfügbaren Node nicht ungefragt", function()
+    local unpurchased = wow_env.new({ tree = { config_id = 7, nodes = { { id = 600, entries = { 6001, 6002 } } } } })
+    local result = unpurchased.ns.folio_api.apply({ [600] = 6001 })
+    assert.same({ { node_id = 600, reason = "unpurchased" } }, result.skipped)
+    assert.same({}, unpurchased.traits.set_calls)
+  end)
+
+  it("erlaubt den Tausch bei einem belegten, aber gesperrten Node", function()
+    local locked = wow_env.new({
+      tree = { config_id = 7, nodes = { { id = 700, entries = { 7001, 7002 }, active = 7001, available = false } } },
+    })
+    local result = locked.ns.folio_api.apply({ [700] = 7002 })
+    assert.same({ 700 }, result.applied)
+  end)
+
+  it("meldet busy, wenn das Spiel gerade speichert", function()
+    env.traits.ready = false
+    local result = api.apply({ [100] = 1002 })
+    assert.equals("busy", result.reason)
+    assert.same({}, env.traits.set_calls)
+  end)
+
+  it("meldet cannot_edit, wenn die Config gerade nicht bearbeitbar ist", function()
+    env.traits.can_edit = false
+    assert.equals("cannot_edit", api.apply({ [100] = 1002 }).reason)
+  end)
+
+  it("meldet einen fehlgeschlagenen Commit und rollt zurück", function()
     env.traits.commit_ok = false
-    assert.equals("commit_failed", api.apply({ [100] = 1002 }).reason)
+    local result = api.apply({ [100] = 1002 })
+    assert.equals("commit_failed", result.reason)
+    assert.equals(1, env.traits.rollbacks)
+  end)
+
+  it("behandelt eine fehlende Tree-Nodes-Liste als leer", function()
+    C_Traits.GetTreeNodes = function() return nil end
+    assert.same({}, api.read_current())
   end)
 
   it("gibt beim Dump Nodes, Entries und Runennamen aus", function()
