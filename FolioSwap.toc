@@ -15,3 +15,4 @@ Core\ProfileStore.lua
 Core\Player.lua
 Core\Reporter.lua
 Core\Actions.lua
+Core\SwapController.lua
