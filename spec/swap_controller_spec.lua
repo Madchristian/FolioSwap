@@ -151,6 +151,43 @@ describe("swap_controller", function()
     assert.equals(1, #env.messages)
   end)
 
+  it("setzt den Retry-Zähler beim Login/Reload zurück (frisches Budget)", function()
+    env.traits.ready = false
+    controller.on_event("PLAYER_ENTERING_WORLD", true, false)
+    for _ = 1, 4 do
+      env.run_timers()
+    end
+    -- Zähler steht kurz vorm Aufgeben; ein neuer Anlass darf trotzdem nicht sofort aufgeben.
+    controller.on_event("PLAYER_ENTERING_WORLD", true, false)
+    assert.same({}, env.messages)
+    for _ = 1, 4 do
+      env.run_timers()
+    end
+    assert.same({}, env.messages)
+    env.run_timers()
+    assert.equals(1, #env.messages)
+  end)
+
+  it("PLAYER_REGEN_ENABLED setzt den Retry-Zähler NICHT zurück: Budget läuft nach dem Kampf weiter", function()
+    env.traits.ready = false
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    for _ = 1, 3 do
+      env.run_timers()
+    end
+
+    env.in_combat = true
+    env.run_timers()
+    assert.equals(1, #env.messages)
+    assert.matches("after combat", env.messages[1])
+
+    env.in_combat = false
+    controller.on_event("PLAYER_REGEN_ENABLED")
+    assert.equals(1, #env.messages)
+    env.run_timers()
+    assert.equals(2, #env.messages)
+    assert.matches("still saving", env.messages[2])
+  end)
+
   it("nennt die benötigten Events", function()
     assert.same(
       { "PLAYER_ENTERING_WORLD", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_REGEN_ENABLED" },

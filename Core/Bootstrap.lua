@@ -17,6 +17,10 @@ frame:SetScript("OnEvent", function(_, event, ...)
     on_addon_loaded(...)
   else
     ns.swap_controller.on_event(event, ...)
+    -- Sonst zeigt das Dropdown bei offenem Foliant-Fenster noch die Profile der alten Spec.
+    if event == "PLAYER_SPECIALIZATION_CHANGED" then
+      ns.folio_panel.refresh()
+    end
   end
 end)
 frame:RegisterEvent("ADDON_LOADED")

@@ -21,6 +21,7 @@ end
 local function refresh()
   if dropdown then dropdown:GenerateMenu() end
 end
+folio_panel.refresh = refresh
 
 local function setup_menu(_, root)
   local spec_id = ns.player.current_spec_id()
@@ -71,6 +72,8 @@ StaticPopupDialogs[SAVE_POPUP] = {
     save_from_popup(popup)
     popup:Hide()
   end,
+  -- Ohne das schließt Escape den Dialog nicht, solange die EditBox den Fokus hat.
+  EditBoxOnEscapePressed = StaticPopup_StandardEditBoxOnEscapePressed,
 }
 
 local function create_button(text, on_click, previous)
@@ -85,7 +88,8 @@ end
 local function build(parent)
   panel = CreateFrame("Frame", nil, parent)
   panel:SetSize(4 * (BUTTON_WIDTH + SPACING) + 180, BUTTON_HEIGHT + 8)
-  panel:SetPoint("TOP", parent, "BOTTOM", 0, -4)
+  -- Die Rahmen-Textur des Foliant-Fensters reicht 13px unter den Fensterrand hinaus.
+  panel:SetPoint("TOP", parent, "BOTTOM", 0, -16)
 
   dropdown = CreateFrame("DropdownButton", nil, panel, "WowStyle1DropdownTemplate")
   dropdown:SetWidth(180)
