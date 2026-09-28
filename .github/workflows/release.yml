@@ -1,0 +1,20 @@
+name: Release
+
+# CalVer-Tags ohne Präfix, z. B. 2026.9.28
+on:
+  push:
+    tags: ["[0-9]*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: BigWigsMods/packager@v2

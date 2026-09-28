@@ -1,0 +1,11 @@
+package-as: FolioSwap
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - spec
+  - docs
+  - scripts
+  - README.md
