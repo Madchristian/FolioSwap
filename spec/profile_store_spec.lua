@@ -104,4 +104,20 @@ describe("profile_store", function()
     assert.same({}, fresh.list(63))
     assert.same({}, db.active)
   end)
+
+  it("verwirft eigene Profile mit nicht-string Schlüssel und normalisiert Name/Source", function()
+    local fresh = wow_env.new().ns.profile_store
+    fresh.init({
+      profiles = {
+        [62] = {
+          [1] = { selections = {} },
+          Echt = { name = "Falsch", selections = { [100] = 1001 } },
+        },
+      },
+    })
+    local list = fresh.list(62)
+    assert.equals(1, #list)
+    assert.equals("Echt", list[1].name)
+    assert.equals("user", list[1].source)
+  end)
 end)

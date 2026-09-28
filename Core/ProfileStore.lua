@@ -8,7 +8,9 @@ local profile_store = {}
 ns.profile_store = profile_store
 
 -- Verwirft grob kaputte SavedVariables-Daten, statt daran zu crashen: falsche Typen für
--- profiles/active, Profile ohne table-selections und nicht-string active-Einträge fallen raus.
+-- profiles/active, Profile ohne table-selections, nicht-string Profil-Schlüssel und
+-- nicht-string active-Einträge fallen raus. Gültige Profile bekommen name/source normalisiert,
+-- damit sortierte Ausgaben (list) sich auf beides verlassen können.
 local function sanitize(db)
   if type(db.profiles) ~= "table" then db.profiles = {} end
   if type(db.active) ~= "table" then db.active = {} end
@@ -17,8 +19,11 @@ local function sanitize(db)
       db.profiles[spec_id] = nil
     else
       for name, profile in pairs(own) do
-        if type(profile) ~= "table" or type(profile.selections) ~= "table" then
+        if type(name) ~= "string" or type(profile) ~= "table" or type(profile.selections) ~= "table" then
           own[name] = nil
+        else
+          profile.name = name
+          profile.source = "user"
         end
       end
     end
