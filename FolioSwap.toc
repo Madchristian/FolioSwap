@@ -11,3 +11,4 @@ Locales\deDE.lua
 Core\Util.lua
 Core\FolioApi.lua
 Core\Presets.lua
+Core\ProfileStore.lua
