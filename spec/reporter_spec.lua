@@ -36,8 +36,15 @@ describe("reporter", function()
   end)
 
   it("meldet einen fehlgeschlagenen Commit", function()
-    reporter.report_apply(PROFILE, { applied = { 100 }, skipped = {}, reason = "commit_failed" })
-    assert.matches("Could not save", env.messages[2])
+    -- FolioApi leert applied nach einem Rollback wieder: "zurückgerollt" heißt nichts übernommen.
+    reporter.report_apply(PROFILE, { applied = {}, skipped = {}, reason = "commit_failed" })
+    assert.matches("Could not save", env.messages[1])
+  end)
+
+  it("meldet einen fehlgeschlagenen Commit auch beim manuellen Anwenden ohne zusätzliches 'schon aktiv'", function()
+    reporter.report_apply(PROFILE, { applied = {}, skipped = {}, reason = "commit_failed" }, true)
+    assert.equals(1, #env.messages)
+    assert.matches("Could not save", env.messages[1])
   end)
 
   it("meldet busy nur beim manuellen Anwenden", function()

@@ -20,4 +20,11 @@ describe("util", function()
     original[100] = 1002
     assert.same({ [100] = 1001 }, copy)
   end)
+
+  it("trimmt Strings und liefert einen leeren String für Nicht-Strings", function()
+    assert.equals("Mein", util.trim("  Mein  "))
+    assert.equals("", util.trim("   "))
+    assert.equals("", util.trim(nil))
+    assert.equals("", util.trim(42))
+  end)
 end)

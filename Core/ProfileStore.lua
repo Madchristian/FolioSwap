@@ -94,8 +94,7 @@ function profile_store.get(spec_id, name)
 end
 
 function profile_store.save(spec_id, name, selections)
-  if type(name) ~= "string" then return false, "empty_name" end
-  name = name:match("^%s*(.-)%s*$")
+  name = util.trim(name)
   if name == "" then return false, "empty_name" end
   if presets.find(spec_id, name) then return false, "preset_name" end
   local profiles = profile_store.db.profiles

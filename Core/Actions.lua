@@ -1,5 +1,6 @@
 local _, ns = ...
 local L = ns.L
+local util = ns.util
 local folio_api = ns.folio_api
 local presets = ns.presets
 local profile_store = ns.profile_store
@@ -18,6 +19,16 @@ local function with_spec(handler)
   end
 end
 
+-- Wie with_spec, normalisiert zusätzlich den Profilnamen: leer (oder kein String, z.B. nil)
+-- bricht mit einer Rückmeldung ab, statt später mit nil in ein string.format zu crashen.
+local function with_profile_name(handler)
+  return with_spec(function(spec_id, name)
+    name = util.trim(name)
+    if name == "" then return reporter.say(L.empty_name) end
+    return handler(spec_id, name)
+  end)
+end
+
 local function say_result(ok, err, success_text, name)
   reporter.say(ok and success_text:format(name) or L[err]:format(name))
 end
@@ -28,26 +39,26 @@ local function apply_profile(profile, verbose)
   return result
 end
 
-actions.apply = with_spec(function(spec_id, name)
+actions.apply = with_profile_name(function(spec_id, name)
   if InCombatLockdown() then return reporter.say(L.in_combat) end
   local profile = profile_store.get(spec_id, name)
   if not profile then return reporter.say(L.not_found:format(name)) end
   apply_profile(profile, true)
 end)
 
-actions.save_current = with_spec(function(spec_id, name)
+actions.save_current = with_profile_name(function(spec_id, name)
   local selections = folio_api.read_current()
-  if not selections then return reporter.report_unavailable() end
+  if not selections then return reporter.report_unavailable(true) end
   local ok, err = profile_store.save(spec_id, name, selections)
   say_result(ok, err, L.saved, name)
 end)
 
-actions.delete = with_spec(function(spec_id, name)
+actions.delete = with_profile_name(function(spec_id, name)
   local ok, err = profile_store.delete(spec_id, name)
   say_result(ok, err, L.deleted, name)
 end)
 
-actions.set_active = with_spec(function(spec_id, name)
+actions.set_active = with_profile_name(function(spec_id, name)
   local ok, err = profile_store.set_active(spec_id, name)
   say_result(ok, err, L.activated, name)
 end)
@@ -73,14 +84,14 @@ end
 
 function actions.dump()
   local rows = folio_api.dump()
-  if not rows then return reporter.report_unavailable() end
+  if not rows then return reporter.report_unavailable(true) end
   profile_store.db.dump = rows
   reporter.say(L.dump_saved:format(#rows))
 end
 
 function actions.check()
   local catalog = folio_api.catalog()
-  if not catalog then return reporter.report_unavailable() end
+  if not catalog then return reporter.report_unavailable(true) end
   local problems = presets.validate(catalog)
   if #problems == 0 then return reporter.say(L.check_ok) end
   for _, problem in ipairs(problems) do

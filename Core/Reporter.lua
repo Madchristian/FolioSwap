@@ -15,8 +15,10 @@ function reporter.say_line(message)
   reporter.sink(message)
 end
 
-function reporter.report_unavailable()
-  if reporter.unavailable_reported then return end
+-- force: Drosselung umgehen (manuelle Befehle sollen den Hinweis immer zeigen;
+-- die Automatik bleibt nach der ersten Meldung pro Sitzung still).
+function reporter.report_unavailable(force)
+  if reporter.unavailable_reported and not force then return end
   reporter.unavailable_reported = true
   reporter.say(L.unavailable)
 end
@@ -39,7 +41,7 @@ end
 -- verbose: manuelles Anwenden – auch "schon aktiv" und "busy" melden.
 -- Ohne verbose (Automatik) bleibt "busy" still, weil der SwapController es erneut versucht.
 function reporter.report_apply(profile, result, verbose)
-  if result.reason == "unavailable" then return reporter.report_unavailable() end
+  if result.reason == "unavailable" then return reporter.report_unavailable(verbose) end
   if result.reason == "busy" and not verbose then return end
   if #result.applied > 0 then
     reporter.say(L.applied:format(profile.name, #result.applied))

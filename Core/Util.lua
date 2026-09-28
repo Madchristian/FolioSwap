@@ -26,3 +26,9 @@ function util.copy(map)
   end
   return result
 end
+
+-- Zentrale Namens-Normalisierung: Nicht-Strings ergeben "", sonst ohne Rand-Whitespace.
+function util.trim(value)
+  if type(value) ~= "string" then return "" end
+  return value:match("^%s*(.-)%s*$")
+end

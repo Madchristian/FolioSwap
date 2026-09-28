@@ -99,4 +99,63 @@ describe("actions", function()
     actions.check()
     assert.matches("node 900 / entry 9001", last_message())
   end)
+
+  it("meldet fehlenden Foliant bei /folio dump trotz Drosselung jedes Mal", function()
+    env = wow_env.new({ tree = { config_id = nil, nodes = {} } })
+    actions = env.ns.actions
+    actions.dump()
+    actions.dump()
+    assert.equals(2, #env.messages)
+  end)
+
+  it("meldet beim manuellen Anwenden fehlenden Foliant auch nach einer Automatik-Meldung", function()
+    env = wow_env.new({ tree = { config_id = nil, nodes = {} }, presets = sample_presets() })
+    actions = env.ns.actions
+    actions.apply_active()
+    local count_before = #env.messages
+    actions.apply("Guide M+")
+    assert.equals(count_before + 1, #env.messages)
+    assert.matches("not unlocked", last_message())
+  end)
+
+  it("weist leere oder fehlende Profilnamen ab, statt zu crashen", function()
+    actions.apply("")
+    assert.matches("Please enter a name%.", last_message())
+    actions.delete(nil)
+    assert.matches("Please enter a name%.", last_message())
+  end)
+
+  it("trimmt den Namen beim Speichern auch in der Rückmeldung", function()
+    actions.save_current("  Mein  ")
+    assert.matches("Profile \"Mein\" saved", last_message())
+  end)
+
+  it("meldet busy beim manuellen Anwenden", function()
+    env.traits.ready = false
+    actions.apply("Guide M+")
+    assert.matches("still saving", last_message())
+  end)
+
+  it("meldet cannot_edit beim manuellen Anwenden", function()
+    env.traits.can_edit = false
+    actions.apply("Guide M+")
+    assert.matches("can't be changed", last_message())
+  end)
+
+  it("schützt Guide-Presets beim Löschen", function()
+    actions.delete("Guide M+")
+    assert.matches("Guide preset \"Guide M%+\" can't be changed", last_message())
+  end)
+
+  it("meldet unbekannte Profile beim Aktivsetzen", function()
+    actions.set_active("Fehlt")
+    assert.matches("No profile \"Fehlt\"", last_message())
+  end)
+
+  it("meldet fehlenden Foliant beim Speichern", function()
+    env = wow_env.new({ tree = { config_id = nil, nodes = {} } })
+    actions = env.ns.actions
+    actions.save_current("X")
+    assert.matches("not unlocked", last_message())
+  end)
 end)
