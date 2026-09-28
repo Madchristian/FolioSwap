@@ -12,3 +12,5 @@ Core\Util.lua
 Core\FolioApi.lua
 Core\Presets.lua
 Core\ProfileStore.lua
+Core\Player.lua
+Core\Reporter.lua
