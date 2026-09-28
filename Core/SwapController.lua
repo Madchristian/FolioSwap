@@ -2,6 +2,7 @@ local _, ns = ...
 local L = ns.L
 
 local RETRY_DELAY = 2
+-- 1 Sofortversuch + MAX_RETRIES Wiederholungen
 local MAX_RETRIES = 5
 -- Für busy (Spiel speichert noch Talente) und unavailable (Foliant-Config beim Login evtl.
 -- noch nicht geladen) gibt es kein zuverlässiges Event, das den richtigen Moment meldet –
@@ -55,13 +56,22 @@ function swap_controller.request_apply()
   swap_controller.pending = true
 end
 
+-- Frisches Budget pro neuem Anlass: nur externe Auslöser (Spec-Wechsel, Login/Reload) setzen den
+-- Zähler zurück, bevor request_apply läuft. Timer-Retries und PLAYER_REGEN_ENABLED (Fortsetzung
+-- eines bereits laufenden Versuchs) behalten ihn bei.
 function swap_controller.on_event(event, ...)
   if event == "PLAYER_SPECIALIZATION_CHANGED" then
     local unit = ...
-    if unit == "player" then swap_controller.request_apply() end
+    if unit == "player" then
+      swap_controller.retries = 0
+      swap_controller.request_apply()
+    end
   elseif event == "PLAYER_ENTERING_WORLD" then
     local is_login, is_reload = ...
-    if is_login or is_reload then swap_controller.request_apply() end
+    if is_login or is_reload then
+      swap_controller.retries = 0
+      swap_controller.request_apply()
+    end
   elseif event == "PLAYER_REGEN_ENABLED" and swap_controller.pending then
     swap_controller.request_apply()
   end

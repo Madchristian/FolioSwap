@@ -106,6 +106,51 @@ describe("swap_controller", function()
     assert.same({ { 100, 1002 } }, env.traits.set_calls)
   end)
 
+  it("gesperrter Foliant über die ganze Kette: meldet genau einmal und verstummt danach", function()
+    C_Traits.GetConfigIDBySystemID = function() return nil end
+
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    for _ = 1, 5 do
+      assert.equals(1, #env.timers)
+      env.run_timers()
+    end
+    assert.same({}, env.traits.set_calls)
+    assert.equals(1, #env.messages)
+    assert.matches("not unlocked", env.messages[1])
+    assert.equals(0, #env.timers)
+
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    for _ = 1, 5 do
+      assert.equals(1, #env.timers)
+      env.run_timers()
+    end
+    assert.equals(1, #env.messages)
+  end)
+
+  it("Event während laufendem Timer erzeugt keinen zweiten Timer", function()
+    env.traits.ready = false
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    assert.equals(1, #env.timers)
+  end)
+
+  it("setzt den Retry-Zähler bei einem neuen Spec-Wechsel zurück (frisches Budget)", function()
+    env.traits.ready = false
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    for _ = 1, 4 do
+      env.run_timers()
+    end
+    -- Zähler steht kurz vorm Aufgeben; ein neuer Anlass darf trotzdem nicht sofort aufgeben.
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    assert.same({}, env.messages)
+    for _ = 1, 4 do
+      env.run_timers()
+    end
+    assert.same({}, env.messages)
+    env.run_timers()
+    assert.equals(1, #env.messages)
+  end)
+
   it("nennt die benötigten Events", function()
     assert.same(
       { "PLAYER_ENTERING_WORLD", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_REGEN_ENABLED" },
