@@ -59,6 +59,25 @@ describe("actions", function()
     assert.matches("deleted", last_message())
   end)
 
+  it("gibt bei save_current/delete/set_active true bei Erfolg und false bei Fehlern zurück", function()
+    assert.is_true(actions.save_current("Mein Setup"))
+    assert.is_false(actions.save_current("Guide M+"))
+    assert.is_true(actions.set_active("Mein Setup"))
+    assert.is_false(actions.set_active("Fehlt"))
+    assert.is_true(actions.delete("Mein Setup"))
+    assert.is_false(actions.delete("Guide M+"))
+  end)
+
+  it("ruft nach apply/save/delete/set_active FolioPanel.refresh auf, wenn geladen", function()
+    local refresh_calls = 0
+    env.ns.folio_panel = { refresh = function() refresh_calls = refresh_calls + 1 end }
+    actions.apply("Guide M+")
+    actions.save_current("Mein Setup")
+    actions.set_active("Mein Setup")
+    actions.delete("Mein Setup")
+    assert.equals(4, refresh_calls)
+  end)
+
   it("listet Profile mit Markierungen", function()
     actions.save_current("Mein Setup")
     actions.list()

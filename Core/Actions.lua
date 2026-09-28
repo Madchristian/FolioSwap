@@ -29,8 +29,15 @@ local function with_profile_name(handler)
   end)
 end
 
+-- FolioPanel wird nur ingame geladen (in Tests nicht Teil der .toc-Dateiliste) - daher die Prüfung.
+local function refresh_panel()
+  if ns.folio_panel then ns.folio_panel.refresh() end
+end
+
 local function say_result(ok, err, success_text, name)
   reporter.say(ok and success_text:format(name) or L[err]:format(name))
+  refresh_panel()
+  return ok
 end
 
 local function apply_profile(profile, verbose)
@@ -44,23 +51,24 @@ actions.apply = with_profile_name(function(spec_id, name)
   local profile = profile_store.get(spec_id, name)
   if not profile then return reporter.say(L.not_found:format(name)) end
   apply_profile(profile, true)
+  refresh_panel()
 end)
 
 actions.save_current = with_profile_name(function(spec_id, name)
   local selections = folio_api.read_current()
   if not selections then return reporter.report_unavailable(true) end
   local ok, err = profile_store.save(spec_id, name, selections)
-  say_result(ok, err, L.saved, name)
+  return say_result(ok, err, L.saved, name)
 end)
 
 actions.delete = with_profile_name(function(spec_id, name)
   local ok, err = profile_store.delete(spec_id, name)
-  say_result(ok, err, L.deleted, name)
+  return say_result(ok, err, L.deleted, name)
 end)
 
 actions.set_active = with_profile_name(function(spec_id, name)
   local ok, err = profile_store.set_active(spec_id, name)
-  say_result(ok, err, L.activated, name)
+  return say_result(ok, err, L.activated, name)
 end)
 
 actions.list = with_spec(function(spec_id)

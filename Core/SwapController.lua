@@ -18,7 +18,8 @@ swap_controller.EVENTS = {
 }
 
 -- Nach MAX_RETRIES gescheiterten Versuchen einmal melden und aufgeben, statt endlos zu pollen.
-function swap_controller.schedule_retry(reason)
+-- Rein interne Implementierungsdetail von request_apply, deshalb kein Tabellen-Eintrag.
+local function schedule_retry(reason)
   if swap_controller.retries >= MAX_RETRIES then
     swap_controller.retries = 0
     if reason == "busy" then
@@ -44,7 +45,7 @@ function swap_controller.request_apply()
     local result = ns.actions.apply_active()
     local reason = result and result.reason
     if TRANSIENT[reason] then
-      swap_controller.schedule_retry(reason)
+      schedule_retry(reason)
     else
       swap_controller.retries = 0
     end

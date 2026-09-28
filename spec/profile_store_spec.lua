@@ -16,6 +16,11 @@ describe("profile_store", function()
     assert.same({ version = 1, profiles = {}, active = {} }, store.init(nil))
   end)
 
+  it("verwirft eine kaputte SavedVariables-Wurzel (falscher Typ) statt zu crashen", function()
+    local fresh = wow_env.new().ns.profile_store
+    assert.same({ version = 1, profiles = {}, active = {} }, fresh.init("kaputt"))
+  end)
+
   it("behält vorhandene Daten beim Init", function()
     local db = store.init({ version = 1, profiles = { [62] = {} }, active = { [62] = "Alt" } })
     assert.equals("Alt", db.active[62])
@@ -48,7 +53,15 @@ describe("profile_store", function()
     assert.same({ false, "empty_name" }, { store.save(62, "   ", {}) })
     assert.is_true(store.save(62, "  Mein  ", { [100] = 1001 }))
     assert.equals("Mein", store.get(62, "Mein").name)
-    assert.is_nil(store.get(62, "  Mein  "))
+    assert.equals("Mein", store.get(62, "  Mein  ").name)
+  end)
+
+  it("trimmt Namen auch bei get/delete/set_active - der Store ist die Grenze zu den Daten", function()
+    store.save(62, "Mein", { [100] = 1001 })
+    assert.is_true(store.set_active(62, "  Mein  "))
+    assert.equals("Mein", store.active_name(62))
+    assert.is_true(store.delete(62, "  Mein  "))
+    assert.is_nil(store.get(62, "Mein"))
   end)
 
   it("löscht eigene Profile und setzt das aktive Profil zurück", function()

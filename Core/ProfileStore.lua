@@ -67,7 +67,7 @@ local function resolve_preset_collisions(db)
 end
 
 function profile_store.init(db)
-  db = db or {}
+  if type(db) ~= "table" then db = {} end
   db.version = db.version or DB_VERSION
   sanitize(db)
   resolve_preset_collisions(db)
@@ -90,6 +90,7 @@ function profile_store.list(spec_id)
 end
 
 function profile_store.get(spec_id, name)
+  name = util.trim(name)
   return presets.find(spec_id, name) or own_profiles(spec_id)[name]
 end
 
@@ -104,6 +105,7 @@ function profile_store.save(spec_id, name, selections)
 end
 
 function profile_store.delete(spec_id, name)
+  name = util.trim(name)
   if presets.find(spec_id, name) then return false, "preset_readonly" end
   local own = own_profiles(spec_id)
   if not own[name] then return false, "not_found" end
@@ -115,6 +117,7 @@ function profile_store.delete(spec_id, name)
 end
 
 function profile_store.set_active(spec_id, name)
+  name = util.trim(name)
   if not profile_store.get(spec_id, name) then return false, "not_found" end
   profile_store.db.active[spec_id] = name
   return true

@@ -1,10 +1,10 @@
 # FolioSwap
 
 Switches your **Omnium Folio** runes (WoW Midnight) automatically when you change specialization.
-Save your own setups per spec or use the bundled guide presets.
+Save your own setups per spec; guide presets are added as soon as the rune IDs are confirmed in-game.
 
-Stellt die Runen des **Omniumfolianten** beim Spec-Wechsel automatisch um – mit eigenen Profilen
-pro Spezialisierung und mitgelieferten Guide-Presets.
+Stellt die Runen des **Omniumfolianten** beim Spec-Wechsel automatisch um – eigene Profile pro
+Spezialisierung speichern; Guide-Presets kommen dazu, sobald die Runen-IDs im Spiel bestätigt sind.
 
 ## Usage
 

@@ -7,7 +7,7 @@ Alle nennenswerten Änderungen an diesem Projekt. Format nach [Keep a Changelog]
 ### Added
 - Automatisches Umstellen des Omniumfolianten beim Spec-Wechsel, im Kampf vorgemerkt bis Kampfende
 - Eigene Profile pro Spezialisierung, accountweit gespeichert
-- Guide-Presets mit Prüfung gegen den aktuellen Foliant (`/folio check`)
+- Unterstützung für Guide-Presets (Daten folgen)
 - Profil-Leiste am Foliant-Fenster und Slash-Befehle `/folio`
 - Texte auf Deutsch und Englisch
 - Kauft nie ungefragt Runen in unbelegten Reihen; prüft Commit-Bereitschaft und rollt bei Fehlern zurück

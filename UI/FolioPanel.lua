@@ -37,25 +37,22 @@ local function setup_menu(_, root)
   end
 end
 
+-- Actions.lua ruft nach apply/save/delete/set_active selbst folio_panel.refresh() auf.
 local function on_selected(action)
   return function()
     local name = selected_or_active()
     if name then action(name) end
-    refresh()
   end
 end
 
 local function delete_selected(name)
-  ns.actions.delete(name)
-  selected_name = nil
+  if ns.actions.delete(name) then selected_name = nil end
 end
 
 local function save_from_popup(popup)
   local edit_box = popup.GetEditBox and popup:GetEditBox() or popup.editBox
-  local name = edit_box:GetText():match("^%s*(.-)%s*$")
-  ns.actions.save_current(name)
-  selected_name = name
-  refresh()
+  local name = ns.util.trim(edit_box:GetText())
+  if ns.actions.save_current(name) then selected_name = name end
 end
 
 StaticPopupDialogs[SAVE_POPUP] = {
