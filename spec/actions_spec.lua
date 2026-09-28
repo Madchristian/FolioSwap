@@ -108,13 +108,13 @@ describe("actions", function()
     assert.equals(2, #env.messages)
   end)
 
-  it("meldet beim manuellen Anwenden fehlenden Foliant auch nach einer Automatik-Meldung", function()
+  it("meldet beim manuellen Anwenden fehlenden Foliant, auch wenn die Automatik zuvor still blieb", function()
     env = wow_env.new({ tree = { config_id = nil, nodes = {} }, presets = sample_presets() })
     actions = env.ns.actions
     actions.apply_active()
-    local count_before = #env.messages
+    assert.equals(0, #env.messages)
     actions.apply("Guide M+")
-    assert.equals(count_before + 1, #env.messages)
+    assert.equals(1, #env.messages)
     assert.matches("not unlocked", last_message())
   end)
 

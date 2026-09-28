@@ -38,11 +38,12 @@ local function describe_skipped(skipped)
   return table.concat(parts, ", ")
 end
 
--- verbose: manuelles Anwenden – auch "schon aktiv" und "busy" melden.
--- Ohne verbose (Automatik) bleibt "busy" still, weil der SwapController es erneut versucht.
+-- verbose: manuelles Anwenden – auch "schon aktiv", "busy" und "unavailable" melden.
+-- Ohne verbose (Automatik) bleiben "busy" und "unavailable" komplett still: der SwapController
+-- meldet sie erst selbst, wenn alle Wiederholungsversuche per Timer gescheitert sind.
 function reporter.report_apply(profile, result, verbose)
-  if result.reason == "unavailable" then return reporter.report_unavailable(verbose) end
-  if result.reason == "busy" and not verbose then return end
+  if not verbose and (result.reason == "busy" or result.reason == "unavailable") then return end
+  if result.reason == "unavailable" then return reporter.report_unavailable(true) end
   if #result.applied > 0 then
     reporter.say(L.applied:format(profile.name, #result.applied))
   elseif verbose and #result.skipped == 0 and not result.reason then

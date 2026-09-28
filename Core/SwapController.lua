@@ -1,20 +1,52 @@
 local _, ns = ...
 local L = ns.L
 
--- pending: im Kampf vorgemerkt; retry_after_commit: Spiel war beim Versuch noch mit Speichern beschäftigt.
-local swap_controller = { pending = false, retry_after_commit = false }
+local RETRY_DELAY = 2
+local MAX_RETRIES = 5
+-- Für busy (Spiel speichert noch Talente) und unavailable (Foliant-Config beim Login evtl.
+-- noch nicht geladen) gibt es kein zuverlässiges Event, das den richtigen Moment meldet –
+-- deshalb per Timer wiederholen, statt auf ein Event zu warten.
+local TRANSIENT = { busy = true, unavailable = true }
+
+-- pending: im Kampf vorgemerkt. retries/retry_scheduled: laufender Timer-Retry bei busy/unavailable.
+local swap_controller = { pending = false, retries = 0, retry_scheduled = false }
 ns.swap_controller = swap_controller
 
 swap_controller.EVENTS = {
-  "PLAYER_ENTERING_WORLD", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_REGEN_ENABLED", "TRAIT_CONFIG_UPDATED",
+  "PLAYER_ENTERING_WORLD", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_REGEN_ENABLED",
 }
+
+-- Nach MAX_RETRIES gescheiterten Versuchen einmal melden und aufgeben, statt endlos zu pollen.
+function swap_controller.schedule_retry(reason)
+  if swap_controller.retries >= MAX_RETRIES then
+    swap_controller.retries = 0
+    if reason == "busy" then
+      ns.reporter.say(L.busy)
+    else
+      ns.reporter.report_unavailable()
+    end
+    return
+  end
+  swap_controller.retries = swap_controller.retries + 1
+  if swap_controller.retry_scheduled then return end
+  swap_controller.retry_scheduled = true
+  C_Timer.After(RETRY_DELAY, function()
+    swap_controller.retry_scheduled = false
+    swap_controller.request_apply()
+  end)
+end
 
 -- Im Kampf lässt sich der Foliant nicht ändern: vormerken und bei Kampfende nachholen.
 function swap_controller.request_apply()
   if not InCombatLockdown() then
     swap_controller.pending = false
     local result = ns.actions.apply_active()
-    swap_controller.retry_after_commit = result ~= nil and result.reason == "busy"
+    local reason = result and result.reason
+    if TRANSIENT[reason] then
+      swap_controller.schedule_retry(reason)
+    else
+      swap_controller.retries = 0
+    end
     return
   end
   if not swap_controller.pending then
@@ -31,8 +63,6 @@ function swap_controller.on_event(event, ...)
     local is_login, is_reload = ...
     if is_login or is_reload then swap_controller.request_apply() end
   elseif event == "PLAYER_REGEN_ENABLED" and swap_controller.pending then
-    swap_controller.request_apply()
-  elseif event == "TRAIT_CONFIG_UPDATED" and swap_controller.retry_after_commit then
     swap_controller.request_apply()
   end
 end

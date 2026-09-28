@@ -22,15 +22,26 @@ end
 -- Letzter Aufruf gewinnt: die Mock-Globals zeigen auf die neueste Umgebung, ältere envs danach nicht mehr verwenden.
 function wow_env.new(opts)
   opts = opts or {}
-  local env = { in_combat = false, spec_id = opts.spec_id or 62, messages = {} }
+  local env = { in_combat = false, spec_id = opts.spec_id or 62, messages = {}, timers = {} }
 
   env.traits = c_traits_mock.install(opts.tree or c_traits_mock.default_tree())
   C_Spell = { GetSpellName = function(spell_id) return "Spell " .. spell_id end }
+  C_Timer = { After = function(_, callback) table.insert(env.timers, callback) end }
   GetLocale = function() return opts.locale or "enUS" end
   InCombatLockdown = function() return env.in_combat end
   GetSpecialization = function() return env.spec_id and 1 or nil end
   GetSpecializationInfo = function() return env.spec_id end
   SlashCmdList = {}
+
+  -- Führt die aktuell wartenden Timer-Callbacks aus; wer während der Ausführung erneut
+  -- C_Timer.After aufruft, landet in der (vorher geleerten) Liste für die nächste Runde.
+  function env.run_timers()
+    local pending = env.timers
+    env.timers = {}
+    for _, callback in ipairs(pending) do
+      callback()
+    end
+  end
 
   env.ns = {}
   for _, path in ipairs(addon_files()) do

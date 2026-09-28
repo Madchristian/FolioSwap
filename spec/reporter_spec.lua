@@ -29,9 +29,21 @@ describe("reporter", function()
     assert.matches("500 %(row still locked%)", env.messages[1])
   end)
 
-  it("meldet den fehlenden Foliant nur einmal pro Sitzung", function()
+  it("schweigt bei unavailable in der Automatik", function()
+    -- Der SwapController meldet unavailable erst selbst, wenn alle Retries gescheitert sind.
     reporter.report_apply(PROFILE, { applied = {}, skipped = {}, reason = "unavailable" })
-    reporter.report_apply(PROFILE, { applied = {}, skipped = {}, reason = "unavailable" })
+    assert.same({}, env.messages)
+  end)
+
+  it("meldet unavailable beim manuellen Anwenden jedes Mal", function()
+    reporter.report_apply(PROFILE, { applied = {}, skipped = {}, reason = "unavailable" }, true)
+    reporter.report_apply(PROFILE, { applied = {}, skipped = {}, reason = "unavailable" }, true)
+    assert.equals(2, #env.messages)
+  end)
+
+  it("meldet den fehlenden Foliant nur einmal pro Sitzung ohne force", function()
+    reporter.report_unavailable()
+    reporter.report_unavailable()
     assert.equals(1, #env.messages)
   end)
 
