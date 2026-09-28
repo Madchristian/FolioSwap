@@ -1,6 +1,6 @@
 local wow_env = require("spec.helpers.wow_env")
 
-local PROFILE = { name = "Guide M+" }
+local PROFILE = { name = "Guide M+", source = "user" }
 
 describe("reporter", function()
   local env, reporter
@@ -54,6 +54,16 @@ describe("reporter", function()
   it("meldet abweichende übersprungene Kombinationen in der Automatik erneut", function()
     reporter.report_apply(PROFILE, { applied = {}, skipped = { { node_id = 500, reason = "locked" } } })
     reporter.report_apply(PROFILE, { applied = {}, skipped = { { node_id = 500, reason = "rejected" } } })
+    assert.equals(2, #env.messages)
+  end)
+
+  it("meldet zwei gleich benannte Profile mit unterschiedlicher gewünschter Rune jeweils", function()
+    local profile_a = { name = "Guide M+", source = "user" }
+    local profile_b = { name = "Guide M+", source = "user" }
+    local skip_a = { applied = {}, skipped = { { node_id = 500, reason = "locked", entry_id = 5001 } } }
+    local skip_b = { applied = {}, skipped = { { node_id = 500, reason = "locked", entry_id = 5002 } } }
+    reporter.report_apply(profile_a, skip_a)
+    reporter.report_apply(profile_b, skip_b)
     assert.equals(2, #env.messages)
   end)
 

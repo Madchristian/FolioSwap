@@ -18,7 +18,7 @@ swap_controller.EVENTS = {
 }
 
 -- Nach MAX_RETRIES gescheiterten Versuchen einmal melden und aufgeben, statt endlos zu pollen.
--- Rein interne Implementierungsdetail von request_apply, deshalb kein Tabellen-Eintrag.
+-- Rein internes Implementierungsdetail von request_apply, deshalb kein Tabellen-Eintrag.
 local function schedule_retry(reason)
   if swap_controller.retries >= MAX_RETRIES then
     swap_controller.retries = 0

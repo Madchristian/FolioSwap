@@ -69,6 +69,17 @@ describe("swap_controller", function()
     assert.same({}, env.traits.set_calls)
   end)
 
+  it("merkt im Kampf nichts vor, wenn nur gesperrte oder unbezahlte Runen abweichen", function()
+    -- Node 500 ist im Standard-Baum ohne aktive Auswahl gesperrt: apply würde das nur
+    -- überspringen, es gibt also nichts, das eine Kampf-Vormerkung rechtfertigt.
+    env = wow_env.new({ presets = { [62] = { { name = "Guide M+", selections = { [500] = 5001 } } } } })
+    controller = env.ns.swap_controller
+    env.in_combat = true
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    assert.same({}, env.messages)
+    assert.same({}, env.traits.set_calls)
+  end)
+
   it("versucht es nach einer kurzen Pause erneut, wenn das Spiel beim Speichern beschäftigt war", function()
     env.traits.ready = false
     controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")

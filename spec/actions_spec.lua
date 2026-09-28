@@ -124,6 +124,14 @@ describe("actions", function()
     assert.is_true(actions.needs_apply())
   end)
 
+  it("braucht kein Anwenden, wenn nur gesperrte oder unbezahlte Runen abweichen", function()
+    -- Node 500 ist im Standard-Baum ohne aktive Auswahl gesperrt (isAvailable = false):
+    -- FolioApi.apply würde das ohnehin nur überspringen, nie ein SetSelection versuchen.
+    env = wow_env.new({ presets = { [62] = { { name = "Guide M+", selections = { [500] = 5001 } } } } })
+    actions = env.ns.actions
+    assert.is_false(actions.needs_apply())
+  end)
+
   it("speichert den Dump in der Datenbank", function()
     actions.dump()
     assert.equals(4, #env.ns.profile_store.db.dump)

@@ -97,12 +97,15 @@ Codepfad:
 - `catalog()` → `[node_id] = { entryID, ... }` aller Auswahl-Nodes, Grundlage für `/folio check`
 - `apply(selections)` → prüft vorab `IsReadyForCommit()`/`CanEditConfig()`, setzt jede abweichende
   Auswahl per `SetSelection` und committet einmal am Ende. Ergebnisvertrag:
-  `{ applied = {node_id, ...}, skipped = {{node_id, reason, name?}, ...},
+  `{ applied = {node_id, ...}, skipped = {{node_id, reason, entry_id, name?}, ...},
   reason = nil | "unavailable" | "busy" | "cannot_edit" | "commit_failed" }`. Skip-Gründe:
-  `unknown | locked | unpurchased | rejected`, mit dem Namen der gewünschten Rune außer bei
-  `unknown`. Schlägt `CommitConfig` fehl, rollt `apply` zurück – `applied` bleibt dann leer. Ein
-  Tausch zwischen bereits belegten Einträgen ist auch bei `isAvailable = false` erlaubt; der
-  Erstkauf eines unbelegten Nodes wird nie ungefragt ausgelöst.
+  `unknown | locked | unpurchased | rejected`; `entry_id` ist immer der gewünschte Eintrag, der
+  Name der gewünschten Rune fehlt nur bei `unknown`. Schlägt `CommitConfig` fehl, rollt `apply`
+  zurück – `applied` bleibt dann leer. Ein Tausch zwischen bereits belegten Einträgen ist auch bei
+  `isAvailable = false` erlaubt; der Erstkauf eines unbelegten Nodes wird nie ungefragt ausgelöst.
+- `pending_changes(selections)` → nur lesend (kein `SetSelection`): die Nodes, für die `apply`
+  tatsächlich einen Tausch versuchen würde (dieselbe Entscheidung wie `apply`, ohne den
+  Seiteneffekt) – Grundlage für `Actions.needs_apply()`
 - `dump()` → alle Nodes/Entries des Baums mit Namen, für die Preset-Pflege
 
 **ProfileStore** – verwaltet `FolioSwapDB`, die Grenze zu den SavedVariables.
@@ -128,7 +131,7 @@ FolioSwapDB = {
   zeigte das aktive Profil auf den alten Namen, wandert es mit um
 
 **Presets** – reine Datentabelle `[spec_id] = { profile, ... }` plus
-`validate(tree_node_ids)` für Tests und `/folio check`.
+`validate(catalog)` (Katalog aus `FolioApi.catalog()`) für Tests und `/folio check`.
 
 **SwapController** – verdrahtet Events, ruft dafür `Actions.apply_active()` auf.
 - `PLAYER_SPECIALIZATION_CHANGED` (unit `player`) sowie `PLAYER_ENTERING_WORLD` nur bei
@@ -138,8 +141,10 @@ FolioSwapDB = {
   5 Wiederholungen); nach Ausschöpfen genau eine Meldung, dann Aufgeben. `PLAYER_REGEN_ENABLED`
   (Fortsetzung eines laufenden Versuchs nach dem Kampf) setzt das Budget nicht zurück
 - Im Kampf (`InCombatLockdown()`) wird nur vorgemerkt, wenn `Actions.needs_apply()` tatsächlich
-  eine Abweichung findet (Spec + aktives Profil vorhanden und `read_current()` weicht ab oder ist
-  unbekannt); sonst bleibt es still. Vorgemerktes wird bei `PLAYER_REGEN_ENABLED` einmalig nachgeholt
+  eine Abweichung findet (Spec + aktives Profil vorhanden und `FolioApi.pending_changes()` liefert
+  mindestens einen Node oder ist `nil`, weil der Foliant gerade nicht lesbar ist); rein gesperrte,
+  unbezahlte oder unbekannte Abweichungen zählen nicht. Sonst bleibt es still. Vorgemerktes wird bei
+  `PLAYER_REGEN_ENABLED` einmalig nachgeholt
 - Stimmt der aktuelle Zustand schon mit dem Profil überein, passiert nichts und es gibt keine Meldung.
 
 **FolioPanel** – hängt sich per `hooksecurefunc(RunesOfPowerMixin, "OnShow", ...)` und zusätzlich
@@ -159,13 +164,14 @@ Spec-Wechsel (`Bootstrap` ruft `refresh()`) und nach jeder Aktion, weil `Actions
 
 | Fall | Verhalten |
 |---|---|
-| `busy` (Spiel speichert noch) | manuell sofort gemeldet; Automatik wiederholt per Timer und meldet erst nach Ausschöpfen aller Retries, dann einmal pro Sitzung |
-| `unavailable` (Foliant nicht freigeschaltet) | manuell immer gemeldet; Automatik genauso per Timer-Retry, danach ebenfalls einmal pro Sitzung |
+| `busy` (Spiel speichert noch) | manuell sofort gemeldet; Automatik bleibt während der Retries still, nach ausgeschöpftem Retry-Budget eine Meldung pro Anlass (nicht pro Sitzung gedrosselt) |
+| `unavailable` (Foliant nicht freigeschaltet) | manuell immer gemeldet; Automatik wiederholt per Timer wie bei `busy`, meldet nach Ausschöpfen aber nur einmal pro Sitzung |
 | `cannot_edit` (Config gerade nicht bearbeitbar) | sofort gemeldet, kein Retry |
-| Reihe noch gesperrt (`unpurchased`, `isAvailable` false ohne bestehende Auswahl) | Reihe überspringen, mit Runennamen in der Meldung nennen |
+| Reihe noch gesperrt (`locked`: kein aktiver Eintrag und `isAvailable` false) | Reihe überspringen, mit Runennamen in der Meldung nennen |
+| Reihe noch nicht gekauft (`unpurchased`: kein aktiver Eintrag, aber `isAvailable` true) | Reihe überspringen statt ungefragt zu kaufen, mit Runennamen in der Meldung nennen |
 | vom Spiel abgelehnt (`rejected`) | Eintrag überspringen, mit Runennamen in der Meldung nennen |
 | nodeID/entryID nicht im Baum 1186 (`unknown`, Patch) | Eintrag überspringen, ohne Runennamen (unbekannt) |
-| Skips in der Automatik | dieselbe Kombination aus Profil + Node/Grund wird nur einmal pro Sitzung gemeldet; manuell jedes Mal |
+| Skips in der Automatik | dieselbe Kombination aus Profil (Quelle + Name) und Node/entryID/Grund wird nur einmal pro Sitzung gemeldet; manuell jedes Mal |
 | `CommitConfig` schlägt fehl (`commit_failed`) | Rollback, Fehlermeldung, `applied` bleibt leer |
 | kein Profil für die Spec | nichts tun, keine Meldung |
 

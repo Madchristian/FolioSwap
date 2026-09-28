@@ -52,7 +52,12 @@ end
 local function save_from_popup(popup)
   local edit_box = popup.GetEditBox and popup:GetEditBox() or popup.editBox
   local name = ns.util.trim(edit_box:GetText())
-  if ns.actions.save_current(name) then selected_name = name end
+  if ns.actions.save_current(name) then
+    -- save_current hat schon aktualisiert, aber noch mit dem alten selected_name;
+    -- ohne dieses zweite refresh() zeigt das Dropdown das vorher gewählte Profil.
+    selected_name = name
+    refresh()
+  end
 end
 
 StaticPopupDialogs[SAVE_POPUP] = {

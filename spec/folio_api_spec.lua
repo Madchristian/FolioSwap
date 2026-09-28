@@ -54,10 +54,10 @@ describe("folio_api", function()
     env.traits.reject[200] = true
     local result = api.apply({ [100] = 9999, [200] = 2002, [500] = 5001, [777] = 1 })
     assert.same({
-      { node_id = 100, reason = "unknown" },
-      { node_id = 200, reason = "rejected", name = "Spell 200200" },
-      { node_id = 500, reason = "locked", name = "Spell 500100" },
-      { node_id = 777, reason = "unknown" },
+      { node_id = 100, reason = "unknown", entry_id = 9999 },
+      { node_id = 200, reason = "rejected", entry_id = 2002, name = "Spell 200200" },
+      { node_id = 500, reason = "locked", entry_id = 5001, name = "Spell 500100" },
+      { node_id = 777, reason = "unknown", entry_id = 1 },
     }, result.skipped)
     assert.same({ { 200, 2002 } }, env.traits.set_calls)
     assert.equals(0, env.traits.commits)
@@ -66,7 +66,7 @@ describe("folio_api", function()
   it("kauft einen unbelegten, verfügbaren Node nicht ungefragt", function()
     local unpurchased = wow_env.new({ tree = { config_id = 7, nodes = { { id = 600, entries = { 6001, 6002 } } } } })
     local result = unpurchased.ns.folio_api.apply({ [600] = 6001 })
-    assert.same({ { node_id = 600, reason = "unpurchased", name = "Spell 600100" } }, result.skipped)
+    assert.same({ { node_id = 600, reason = "unpurchased", entry_id = 6001, name = "Spell 600100" } }, result.skipped)
     assert.same({}, unpurchased.traits.set_calls)
   end)
 
@@ -108,5 +108,28 @@ describe("folio_api", function()
     assert.equals(4, #rows)
     assert.equals(100, rows[1].node_id)
     assert.same({ entry_id = 1001, name = "Spell 100100" }, rows[1].entries[1])
+  end)
+
+  describe("pending_changes", function()
+    it("ist ohne Config-ID nil", function()
+      local locked = wow_env.new({ tree = LOCKED_FOLIO }).ns.folio_api
+      assert.is_nil(locked.pending_changes({ [100] = 1002 }))
+    end)
+
+    it("ist leer, wenn schon alles passt", function()
+      assert.same({}, api.pending_changes({ [100] = 1001 }))
+    end)
+
+    it("nennt nur Nodes, für die apply tatsächlich SetSelection versuchen würde", function()
+      local changes = api.pending_changes({ [100] = 1002, [500] = 5001, [777] = 1 })
+      assert.same({ 100 }, changes)
+      -- rein lesend: kein SetSelection-Aufruf.
+      assert.same({}, env.traits.set_calls)
+    end)
+
+    it("zählt gesperrte, unbezahlte und unbekannte Abweichungen nicht als anstehende Änderung", function()
+      local unpurchased = wow_env.new({ tree = { config_id = 7, nodes = { { id = 600, entries = { 6001, 6002 } } } } })
+      assert.same({}, unpurchased.ns.folio_api.pending_changes({ [600] = 6001 }))
+    end)
   end)
 end)

@@ -1,7 +1,7 @@
 local _, ns = ...
 local L = ns.L
 
--- reported_skips: [profil_name .. "|" .. sortierte "node_id:reason"-Liste] = true.
+-- reported_skips: [source|name|sortierte "node_id:entry_id:reason"-Liste] = true.
 -- Verhindert, dass die Automatik dieselbe übersprungene Kombination jede Sitzung erneut meldet.
 local reporter = { unavailable_reported = false, reported_skips = {} }
 ns.reporter = reporter
@@ -40,15 +40,17 @@ local function describe_skipped(skipped)
   return table.concat(parts, ", ")
 end
 
--- Kombination aus Profilname und den übersprungenen node_id/reason-Paaren, unabhängig von der
--- Reihenfolge - identifiziert, ob die Automatik genau dieses Ergebnis schon gemeldet hat.
-local function skip_key(profile_name, skipped)
+-- Kombination aus Profil (Quelle + Name - report_apply kennt keine spec_id) und den
+-- übersprungenen node_id/entry_id/reason-Tripeln, unabhängig von der Reihenfolge - identifiziert,
+-- ob die Automatik genau dieses Ergebnis schon gemeldet hat. Die gewünschte entry_id gehört mit in
+-- den Schlüssel, damit zwei gleich benannte Profile mit unterschiedlicher Rune nicht kollidieren.
+local function skip_key(profile, skipped)
   local parts = {}
   for _, entry in ipairs(skipped) do
-    parts[#parts + 1] = entry.node_id .. ":" .. entry.reason
+    parts[#parts + 1] = entry.node_id .. ":" .. tostring(entry.entry_id) .. ":" .. entry.reason
   end
   table.sort(parts)
-  return profile_name .. "|" .. table.concat(parts, ",")
+  return tostring(profile.source) .. "|" .. profile.name .. "|" .. table.concat(parts, ",")
 end
 
 -- verbose: manuelles Anwenden – auch "schon aktiv", "busy" und "unavailable" melden.
@@ -63,7 +65,7 @@ function reporter.report_apply(profile, result, verbose)
     reporter.say(L.unchanged:format(profile.name))
   end
   if #result.skipped > 0 then
-    local key = skip_key(profile.name, result.skipped)
+    local key = skip_key(profile, result.skipped)
     if verbose or not reporter.reported_skips[key] then
       reporter.reported_skips[key] = true
       reporter.say(L.skipped:format(#result.skipped, profile.name, describe_skipped(result.skipped)))
