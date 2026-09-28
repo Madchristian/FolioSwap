@@ -23,4 +23,17 @@ describe("Locales", function()
       end
     end
   end)
+
+  it("behält Format-Platzhalter in Anzahl und Reihenfolge bei", function()
+    local en = wow_env.new().ns.L
+    local de = wow_env.new({ locale = "deDE" }).ns.L
+    local function placeholders(text)
+      local list = {}
+      for placeholder in text:gmatch("%%%a") do list[#list + 1] = placeholder end
+      return table.concat(list, ",")
+    end
+    for key, text in pairs(en) do
+      assert.equals(placeholders(text), placeholders(de[key]), key)
+    end
+  end)
 end)
