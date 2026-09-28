@@ -86,6 +86,25 @@ describe("actions", function()
     assert.is_nil(actions.apply_active())
   end)
 
+  it("erkennt, ob das aktive Profil noch angewendet werden muss", function()
+    assert.is_true(actions.needs_apply())
+    actions.apply_active()
+    assert.is_false(actions.needs_apply())
+  end)
+
+  it("braucht kein Anwenden ohne Spezialisierung oder ohne aktives Profil", function()
+    env.spec_id = nil
+    assert.is_false(actions.needs_apply())
+    env.spec_id = 63
+    assert.is_false(actions.needs_apply())
+  end)
+
+  it("braucht ein Anwenden, wenn der Foliant noch nicht gelesen werden kann", function()
+    env = wow_env.new({ tree = { config_id = nil, nodes = {} }, presets = sample_presets() })
+    actions = env.ns.actions
+    assert.is_true(actions.needs_apply())
+  end)
+
   it("speichert den Dump in der Datenbank", function()
     actions.dump()
     assert.equals(4, #env.ns.profile_store.db.dump)

@@ -82,6 +82,20 @@ function actions.apply_active()
   return apply_profile(profile, false)
 end
 
+-- Für die Kampf-Vormerkung: true, wenn eine Spec und ein aktives Profil existieren und entweder
+-- der aktuelle Zustand unbekannt ist oder mindestens eine Auswahl des Profils abweicht.
+function actions.needs_apply()
+  local spec_id = player.current_spec_id()
+  local profile = spec_id and profile_store.get_active(spec_id)
+  if not profile then return false end
+  local current = folio_api.read_current()
+  if not current then return true end
+  for node_id, entry_id in pairs(profile.selections) do
+    if current[node_id] ~= entry_id then return true end
+  end
+  return false
+end
+
 function actions.dump()
   local rows = folio_api.dump()
   if not rows then return reporter.report_unavailable(true) end

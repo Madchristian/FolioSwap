@@ -74,9 +74,11 @@ function folio_api.catalog()
   return catalog
 end
 
--- API-Vertrag: result = { applied = {node_id, ...}, skipped = {{node_id = ..., reason = ...}, ...},
+-- API-Vertrag: result = { applied = {node_id, ...},
+-- skipped = {{node_id = ..., reason = ..., name = ...}, ...},
 -- reason = nil | "unavailable" | "busy" | "cannot_edit" | "commit_failed" }.
--- Skip-Gründe: "unknown" | "locked" | "unpurchased" | "rejected".
+-- Skip-Gründe: "unknown" | "locked" | "unpurchased" | "rejected". Der Name der gewünschten Rune
+-- fehlt nur bei "unknown" (entry_id ist dann im Baum nicht auffindbar).
 -- CommitConfig() == true heißt nur "vom Spiel angenommen" – das endgültige Ergebnis kommt
 -- asynchron über das Event TRAIT_CONFIG_UPDATED.
 -- Nach einem RollbackConfig ist applied wieder leer: zurückgerollt heißt nichts übernommen.
@@ -102,7 +104,12 @@ function folio_api.apply(selections)
     if outcome == "applied" then
       table.insert(result.applied, node_id)
     elseif outcome ~= "unchanged" then
-      table.insert(result.skipped, { node_id = node_id, reason = outcome })
+      local skip = { node_id = node_id, reason = outcome }
+      -- Bei "unknown" ist der entry_id im Baum nicht auffindbar - kein Name zu ermitteln.
+      if outcome ~= "unknown" then
+        skip.name = entry_name(config_id, selections[node_id])
+      end
+      table.insert(result.skipped, skip)
     end
   end
 

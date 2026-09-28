@@ -55,8 +55,8 @@ describe("folio_api", function()
     local result = api.apply({ [100] = 9999, [200] = 2002, [500] = 5001, [777] = 1 })
     assert.same({
       { node_id = 100, reason = "unknown" },
-      { node_id = 200, reason = "rejected" },
-      { node_id = 500, reason = "locked" },
+      { node_id = 200, reason = "rejected", name = "Spell 200200" },
+      { node_id = 500, reason = "locked", name = "Spell 500100" },
       { node_id = 777, reason = "unknown" },
     }, result.skipped)
     assert.same({ { 200, 2002 } }, env.traits.set_calls)
@@ -66,7 +66,7 @@ describe("folio_api", function()
   it("kauft einen unbelegten, verfügbaren Node nicht ungefragt", function()
     local unpurchased = wow_env.new({ tree = { config_id = 7, nodes = { { id = 600, entries = { 6001, 6002 } } } } })
     local result = unpurchased.ns.folio_api.apply({ [600] = 6001 })
-    assert.same({ { node_id = 600, reason = "unpurchased" } }, result.skipped)
+    assert.same({ { node_id = 600, reason = "unpurchased", name = "Spell 600100" } }, result.skipped)
     assert.same({}, unpurchased.traits.set_calls)
   end)
 

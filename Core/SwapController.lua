@@ -50,6 +50,8 @@ function swap_controller.request_apply()
     end
     return
   end
+  -- Nichts vormerken, wenn ohnehin kein Profil greift oder es schon passt.
+  if not ns.actions.needs_apply() then return end
   if not swap_controller.pending then
     ns.reporter.say(L.combat_pending)
   end

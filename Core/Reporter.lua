@@ -1,7 +1,9 @@
 local _, ns = ...
 local L = ns.L
 
-local reporter = { unavailable_reported = false }
+-- reported_skips: [profil_name .. "|" .. sortierte "node_id:reason"-Liste] = true.
+-- Verhindert, dass die Automatik dieselbe übersprungene Kombination jede Sitzung erneut meldet.
+local reporter = { unavailable_reported = false, reported_skips = {} }
 ns.reporter = reporter
 
 -- Austauschbar für Tests; im Spiel landet alles im Chat.
@@ -33,9 +35,20 @@ end
 local function describe_skipped(skipped)
   local parts = {}
   for _, entry in ipairs(skipped) do
-    parts[#parts + 1] = entry.node_id .. " (" .. L["reason_" .. entry.reason] .. ")"
+    parts[#parts + 1] = (entry.name or entry.node_id) .. " (" .. L["reason_" .. entry.reason] .. ")"
   end
   return table.concat(parts, ", ")
+end
+
+-- Kombination aus Profilname und den übersprungenen node_id/reason-Paaren, unabhängig von der
+-- Reihenfolge - identifiziert, ob die Automatik genau dieses Ergebnis schon gemeldet hat.
+local function skip_key(profile_name, skipped)
+  local parts = {}
+  for _, entry in ipairs(skipped) do
+    parts[#parts + 1] = entry.node_id .. ":" .. entry.reason
+  end
+  table.sort(parts)
+  return profile_name .. "|" .. table.concat(parts, ",")
 end
 
 -- verbose: manuelles Anwenden – auch "schon aktiv", "busy" und "unavailable" melden.
@@ -50,7 +63,11 @@ function reporter.report_apply(profile, result, verbose)
     reporter.say(L.unchanged:format(profile.name))
   end
   if #result.skipped > 0 then
-    reporter.say(L.skipped:format(#result.skipped, profile.name, describe_skipped(result.skipped)))
+    local key = skip_key(profile.name, result.skipped)
+    if verbose or not reporter.reported_skips[key] then
+      reporter.reported_skips[key] = true
+      reporter.say(L.skipped:format(#result.skipped, profile.name, describe_skipped(result.skipped)))
+    end
   end
   -- commit_failed, busy, cannot_edit: der Grund ist zugleich der Text-Schlüssel.
   if result.reason then

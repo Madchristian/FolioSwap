@@ -48,6 +48,27 @@ describe("swap_controller", function()
     assert.equals(1, #env.traits.set_calls)
   end)
 
+  it("merkt im Kampf nichts vor, wenn keine Spezialisierung aktiv ist", function()
+    env.spec_id = nil
+    env.in_combat = true
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    assert.same({}, env.messages)
+
+    env.in_combat = false
+    controller.on_event("PLAYER_REGEN_ENABLED")
+    assert.same({}, env.traits.set_calls)
+    assert.same({}, env.messages)
+  end)
+
+  it("merkt im Kampf nichts vor, wenn das aktive Profil schon passt", function()
+    env = wow_env.new({ presets = { [62] = { { name = "Guide M+", selections = { [100] = 1001 } } } } })
+    controller = env.ns.swap_controller
+    env.in_combat = true
+    controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")
+    assert.same({}, env.messages)
+    assert.same({}, env.traits.set_calls)
+  end)
+
   it("versucht es nach einer kurzen Pause erneut, wenn das Spiel beim Speichern beschäftigt war", function()
     env.traits.ready = false
     controller.on_event("PLAYER_SPECIALIZATION_CHANGED", "player")

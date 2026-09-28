@@ -29,6 +29,34 @@ describe("reporter", function()
     assert.matches("500 %(row still locked%)", env.messages[1])
   end)
 
+  it("zeigt den Runennamen statt der node_id, wenn FolioApi ihn liefert", function()
+    reporter.report_apply(PROFILE, {
+      applied = {},
+      skipped = { { node_id = 500, reason = "locked", name = "Spell 500100" } },
+    })
+    assert.matches("Spell 500100 %(row still locked%)", env.messages[1])
+  end)
+
+  it("meldet dieselbe übersprungene Kombination in der Automatik nur einmal pro Sitzung", function()
+    local result = { applied = {}, skipped = { { node_id = 500, reason = "locked" } } }
+    reporter.report_apply(PROFILE, result)
+    reporter.report_apply(PROFILE, result)
+    assert.equals(1, #env.messages)
+  end)
+
+  it("meldet dieselbe übersprungene Kombination beim manuellen Anwenden jedes Mal", function()
+    local result = { applied = {}, skipped = { { node_id = 500, reason = "locked" } } }
+    reporter.report_apply(PROFILE, result, true)
+    reporter.report_apply(PROFILE, result, true)
+    assert.equals(2, #env.messages)
+  end)
+
+  it("meldet abweichende übersprungene Kombinationen in der Automatik erneut", function()
+    reporter.report_apply(PROFILE, { applied = {}, skipped = { { node_id = 500, reason = "locked" } } })
+    reporter.report_apply(PROFILE, { applied = {}, skipped = { { node_id = 500, reason = "rejected" } } })
+    assert.equals(2, #env.messages)
+  end)
+
   it("schweigt bei unavailable in der Automatik", function()
     -- Der SwapController meldet unavailable erst selbst, wenn alle Retries gescheitert sind.
     reporter.report_apply(PROFILE, { applied = {}, skipped = {}, reason = "unavailable" })
