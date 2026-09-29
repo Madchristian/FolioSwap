@@ -23,4 +23,27 @@ If the game is busy or the Folio hasn't loaded yet at login, FolioSwap retries f
 
 ## Development
 
-`scripts/test.sh` sets up Lua 5.1 locally and runs luacheck and busted.
+```sh
+git clone https://github.com/Madchristian/FolioSwap.git
+cd FolioSwap
+git switch feature/v1   # until PR #1 is merged
+```
+
+**Tests** – `scripts/test.sh` sets up Lua 5.1 locally (`.lua/`, via `uvx hererocks`) and runs luacheck and busted.
+
+- macOS/Linux: needs `uv` and a C compiler (Xcode CLT / build-essential).
+- Windows: run it inside WSL (Ubuntu):
+  ```sh
+  sudo apt install -y build-essential curl git
+  curl -LsSf https://astral.sh/uv/install.sh | sh   # then open a new shell
+  cd /mnt/c/<path>/FolioSwap && scripts/test.sh
+  ```
+  GitHub Actions runs the same checks on every pull request.
+
+**Run in game** – link the repo into your AddOns folder, then `/reload`:
+
+- Windows (PowerShell, no admin needed): `powershell -ExecutionPolicy Bypass -File scripts\link-addon.ps1`
+  (finds WoW via the registry; override with `-RetailPath "D:\World of Warcraft\_retail_"`)
+- macOS: `scripts/link-addon.sh`
+
+Project context for Claude Code: see `CLAUDE.md`.

@@ -9,3 +9,4 @@ ignore:
   - docs
   - scripts
   - README.md
+  - CLAUDE.md
