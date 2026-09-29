@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: "5.1.5"
+      - uses: leafo/gh-actions-luarocks@v6
+      - name: Werkzeuge installieren
+        run: |
+          luarocks install busted
+          luarocks install luacheck
+      - name: Lint
+        run: luacheck .
+      - name: Tests
+        run: busted
+      - name: Parse TOC runtime with Lua 5.1
+        run: lua scripts/verify.lua parse
+      - name: Test local release packager
+        run: python3 scripts/test_package_release.py

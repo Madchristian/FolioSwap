@@ -1,0 +1,32 @@
+local wow_env = require("spec.helpers.wow_env")
+local frames = require("spec.helpers.frame_mock")
+
+describe("flat widgets", function()
+  it("zeichnet echte templatefreie Flächen und Hover/Selected/Disabled ohne Doppelclick", function()
+    local ns = wow_env.new().ns
+    frames.install()
+    assert.is_table(ns.flat_ui)
+    local calls = 0
+    local b = ns.flat_ui.button(UIParent, "Test", 120, function() calls = calls + 1 end)
+    assert.is_nil(b.template)
+    assert.same({ "LeftButtonUp" }, b.clicks)
+    assert.is_table(b.surface.color)
+    local normal = b.surface.color
+    frames.fire(b, "OnEnter")
+    assert.is_not.same(normal, b.surface.color)
+    frames.fire(b, "OnLeave")
+    assert.same(normal, b.surface.color)
+    b.selected = true
+    ns.flat_ui.refresh()
+    assert.is_not.same(normal, b.surface.color)
+    frames.fire(b, "OnClick")
+    assert.equals(1, calls)
+    b:SetEnabled(false)
+    frames.fire(b, "OnClick")
+    assert.equals(1, calls)
+    assert.equals(0.4, b.label.text_color[1])
+    ns.skin.set("accent", "violet")
+    b:SetEnabled(true)
+    assert.equals(0.73, b.marker.color[1])
+  end)
+end)

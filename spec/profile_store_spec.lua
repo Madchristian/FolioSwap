@@ -1,0 +1,136 @@
+local wow_env = require("spec.helpers.wow_env")
+
+local function sample_presets()
+  return { [62] = { { name = "Guide M+", selections = { [100] = 1002 } } } }
+end
+
+describe("profile_store", function()
+  local env, store, presets
+  before_each(function()
+    env = wow_env.new({ presets = sample_presets() })
+    store = env.ns.profile_store
+    presets = env.ns.presets
+  end)
+
+  it("legt fehlende Tabellen beim Init an", function()
+    assert.same({ version = 1, profiles = {}, active = {}, skin = env.ns.skin.normalize() }, store.init(nil))
+  end)
+
+  it("verwirft eine kaputte SavedVariables-Wurzel (falscher Typ) statt zu crashen", function()
+    local fresh = wow_env.new().ns.profile_store
+    assert.same({ version = 1, profiles = {}, active = {}, skin = env.ns.skin.normalize() }, fresh.init("kaputt"))
+  end)
+
+  it("behält vorhandene Daten beim Init", function()
+    local db = store.init({ version = 1, profiles = { [62] = {} }, active = { [62] = "Alt" } })
+    assert.equals("Alt", db.active[62])
+    assert.equals(db, store.db)
+  end)
+
+  it("listet Presets vor eigenen Profilen, eigene alphabetisch", function()
+    store.save(62, "Zeta", { [100] = 1001 })
+    store.save(62, "Alpha", { [100] = 1001 })
+    local names = {}
+    for _, profile in ipairs(store.list(62)) do names[#names + 1] = profile.name end
+    assert.same({ "Guide M+", "Alpha", "Zeta" }, names)
+  end)
+
+  it("speichert eine Kopie der Auswahl als eigenes Profil", function()
+    local selections = { [100] = 1001 }
+    assert.is_true(store.save(62, "Mein", selections))
+    selections[100] = 1002
+    local profile = store.get(62, "Mein")
+    assert.equals(1001, profile.selections[100])
+    assert.equals("user", profile.source)
+  end)
+
+  it("lehnt leere Namen und Preset-Namen ab", function()
+    assert.same({ false, "empty_name" }, { store.save(62, "", {}) })
+    assert.same({ false, "preset_name" }, { store.save(62, "Guide M+", {}) })
+  end)
+
+  it("trimmt Namen beim Speichern und lehnt reine Leerzeichen ab", function()
+    assert.same({ false, "empty_name" }, { store.save(62, "   ", {}) })
+    assert.is_true(store.save(62, "  Mein  ", { [100] = 1001 }))
+    assert.equals("Mein", store.get(62, "Mein").name)
+    assert.equals("Mein", store.get(62, "  Mein  ").name)
+  end)
+
+  it("trimmt Namen auch bei get/delete/set_active - der Store ist die Grenze zu den Daten", function()
+    store.save(62, "Mein", { [100] = 1001 })
+    assert.is_true(store.set_active(62, "  Mein  "))
+    assert.equals("Mein", store.active_name(62))
+    assert.is_true(store.delete(62, "  Mein  "))
+    assert.is_nil(store.get(62, "Mein"))
+  end)
+
+  it("löscht eigene Profile und setzt das aktive Profil zurück", function()
+    store.save(62, "Mein", { [100] = 1001 })
+    store.set_active(62, "Mein")
+    assert.is_true(store.delete(62, "Mein"))
+    assert.is_nil(store.get(62, "Mein"))
+    assert.equals("Guide M+", store.active_name(62))
+    assert.is_nil(store.db.active[62])
+  end)
+
+  it("schützt Presets und meldet unbekannte Profile beim Löschen", function()
+    assert.same({ false, "preset_readonly" }, { store.delete(62, "Guide M+") })
+    assert.same({ false, "not_found" }, { store.delete(62, "Gibt es nicht") })
+  end)
+
+  it("nimmt ohne gesetztes aktives Profil das erste Preset", function()
+    assert.equals("Guide M+", store.get_active(62).name)
+    assert.is_nil(store.get_active(63))
+  end)
+
+  it("setzt nur existierende Profile aktiv", function()
+    assert.same({ false, "not_found" }, { store.set_active(62, "Fehlt") })
+    store.save(62, "Mein", { [100] = 1001 })
+    assert.is_true(store.set_active(62, "Mein"))
+    assert.equals("Mein", store.get_active(62).name)
+  end)
+
+  it("löst eine Namenskollision mit einem später ausgelieferten Preset beim Re-Init auf", function()
+    store.save(62, "Raid", { [100] = 1001 })
+    store.set_active(62, "Raid")
+    local list = presets.data[62]
+    list[#list + 1] = { name = "Raid", selections = { [100] = 1002 } }
+
+    local db = store.init(store.db)
+
+    assert.equals("user", store.get(62, "Raid (2)").source)
+    assert.equals("Raid (2)", db.active[62])
+    local seen = {}
+    for _, profile in ipairs(store.list(62)) do
+      assert.is_nil(seen[profile.name], "Doppelter Name " .. profile.name)
+      seen[profile.name] = true
+    end
+  end)
+
+  it("übersteht kaputte SavedVariables beim Init ohne Absturz", function()
+    local fresh = wow_env.new().ns.profile_store
+    local db = fresh.init({
+      profiles = { [62] = "kaputt", [63] = { X = { name = "X" } } },
+      active = { [62] = 5 },
+    })
+    assert.same({}, fresh.list(62))
+    assert.same({}, fresh.list(63))
+    assert.same({}, db.active)
+  end)
+
+  it("verwirft eigene Profile mit nicht-string Schlüssel und normalisiert Name/Source", function()
+    local fresh = wow_env.new().ns.profile_store
+    fresh.init({
+      profiles = {
+        [62] = {
+          [1] = { selections = {} },
+          Echt = { name = "Falsch", selections = { [100] = 1001 } },
+        },
+      },
+    })
+    local list = fresh.list(62)
+    assert.equals(1, #list)
+    assert.equals("Echt", list[1].name)
+    assert.equals("user", list[1].source)
+  end)
+end)

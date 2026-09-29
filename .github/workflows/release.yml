@@ -1,0 +1,30 @@
+name: Release
+
+# CalVer-Tags ohne Präfix, z. B. 2026.9.28
+on:
+  push:
+    tags: ["[0-9]*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Validate CalVer tag and local package
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python3 scripts/package_release.py "$RELEASE_TAG" --output "$RUNNER_TEMP/FolioSwap-${RELEASE_TAG}.zip"
+      - uses: BigWigsMods/packager@v2
+        env:
+          # Both hosts import from GitHub; do not add API upload tokens.
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,31 @@
+local wow_env = require("spec.helpers.wow_env")
+
+describe("account skin", function()
+  it("normalisiert nur Skin-Daten und persistiert Änderungen ohne Profile anzutasten", function()
+    local ns = wow_env.new().ns
+    assert.is_table(ns.skin)
+    local db = ns.profile_store.init({ skin = { accent = "invalid", opacity = 0/0, scale = math.huge } })
+    assert.same({ accent = "teal", opacity = 0.94, scale = 1 }, db.skin)
+    ns.profile_store.save(62, "Keep", { [1] = 2 })
+    local profiles = db.profiles
+    ns.skin.set("accent", "violet")
+    ns.skin.set("opacity", 0.8)
+    ns.skin.set("scale", 1.2)
+    ns.profile_store.init(db)
+    assert.same({ accent = "violet", opacity = 0.8, scale = 1.2 }, db.skin)
+    assert.equals(profiles, db.profiles)
+    ns.skin.set("scale", 99)
+    ns.skin.set("opacity", -10)
+    assert.equals(1.25, db.skin.scale)
+    assert.equals(0.65, db.skin.opacity)
+    ns.skin.set("profiles", {})
+    assert.equals(profiles, db.profiles)
+    ns.skin.reset()
+    assert.same({ accent = "teal", opacity = 0.94, scale = 1 }, db.skin)
+    assert.same({ [1] = 2 }, ns.profile_store.get(62, "Keep").selections)
+    for _, bad in ipairs({ false, "bad", 4, {} }) do
+      ns.profile_store.init({ skin = bad })
+      assert.same({ accent = "teal", opacity = 0.94, scale = 1 }, ns.profile_store.db.skin)
+    end
+  end)
+end)

@@ -1,0 +1,3 @@
+# Einheitlich LF – sonst bricht scripts/test.sh unter WSL/Git Bash und das TOC-Parsing der Tests.
+* text=auto eol=lf
+*.ps1 text eol=crlf

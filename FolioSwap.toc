@@ -1,0 +1,27 @@
+## Interface: 120100
+## Title: FolioSwap
+## Notes: Switches your Omnium Folio runes automatically per specialization.
+## Notes-deDE: Stellt die Runen des Omniumfolianten automatisch pro Spezialisierung um.
+## Author: Madchristian
+## X-License: All Rights Reserved
+## X-Wago-ID: bGoYYJ60
+## X-Curse-Project-ID: 1718288
+## Version: @project-version@
+## SavedVariables: FolioSwapDB
+
+Locales\enUS.lua
+Locales\deDE.lua
+Core\Util.lua
+Core\FolioApi.lua
+Core\Presets.lua
+UI\Skin.lua
+Core\ProfileStore.lua
+Core\Player.lua
+Core\Reporter.lua
+Core\Actions.lua
+Core\SwapController.lua
+UI\FlatUI.lua
+UI\SkinOptions.lua
+UI\SlashCommands.lua
+UI\FolioPanel.lua
+Core\Bootstrap.lua

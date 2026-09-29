@@ -1,0 +1,24 @@
+package-as: FolioSwap
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# LICENSE and CHANGELOG.md are intentionally included.
+ignore:
+  - .github
+  - .gitignore
+  - .gitattributes
+  - .pkgmeta
+  - .busted
+  - .luacheckrc
+  - .luarc.json
+  - .lua
+  - .luarocks
+  - .release
+  - artwork
+  - spec
+  - docs
+  - scripts
+  - README.md
+  - CLAUDE.md

@@ -1,0 +1,6 @@
+{
+  "runtime.version": "Lua 5.1",
+  "workspace.library": ["${3rd}/busted/library", "${3rd}/luassert/library"],
+  "workspace.ignoreDir": [".lua", ".luarocks", ".release"],
+  "diagnostics.globals": ["C_Traits", "C_Spell", "C_Timer", "CreateFrame", "GetLocale", "GetSpecialization", "GetSpecializationInfo", "InCombatLockdown", "hooksecurefunc", "StaticPopup_Show", "StaticPopup_StandardEditBoxOnEscapePressed", "StaticPopupDialogs", "RunesOfPowerMixin", "ExpansionLandingPage", "ACCEPT", "CANCEL", "FolioSwapDB", "SlashCmdList", "SLASH_FOLIOSWAP1", "SLASH_FOLIOSWAP2"]
+}
