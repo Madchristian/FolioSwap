@@ -24,8 +24,8 @@ local function choice_nodes(config_id)
   return nodes
 end
 
-local function active_entry_id(info)
-  return info.activeEntry and info.activeEntry.entryID
+local function committed_entry_id(info)
+  return info.entryIDsWithCommittedRanks and info.entryIDsWithCommittedRanks[1]
 end
 
 local function entry_name(config_id, entry_id)
@@ -43,8 +43,8 @@ end
 -- Erstkauf eines unbelegten Nodes wird nie ungefragt ausgelöst, weil er Foliant-Währung kostet.
 local function decide_selection(info, entry_id)
   if not info or not util.contains(info.entryIDs, entry_id) then return "unknown" end
-  if active_entry_id(info) == entry_id then return "unchanged" end
-  if not active_entry_id(info) then
+  if committed_entry_id(info) == entry_id then return "unchanged" end
+  if not committed_entry_id(info) then
     if not info.isAvailable then return "locked" end
     return "unpurchased"
   end
@@ -68,7 +68,9 @@ function folio_api.read_current()
   if not config_id then return nil end
   local selections = {}
   for node_id, info in pairs(choice_nodes(config_id)) do
-    selections[node_id] = active_entry_id(info)
+    local committed = info.entryIDsWithCommittedRanks
+    if not committed then return nil end
+    selections[node_id] = committed[1]
   end
   return selections
 end
@@ -83,15 +85,32 @@ function folio_api.catalog()
   return catalog
 end
 
--- API-Vertrag: result = { applied = {node_id, ...},
--- skipped = {{node_id = ..., reason = ..., entry_id = ..., name = ...}, ...},
--- reason = nil | "unavailable" | "busy" | "cannot_edit" | "commit_failed" }.
--- Skip-Gründe: "unknown" | "locked" | "unpurchased" | "rejected". entry_id ist immer der
--- gewünschte Eintrag; der Name der gewünschten Rune fehlt nur bei "unknown" (entry_id ist dann im
--- Baum nicht auffindbar).
--- CommitConfig() == true heißt nur "vom Spiel angenommen" – das endgültige Ergebnis kommt
--- asynchron über das Event TRAIT_CONFIG_UPDATED.
--- Nach einem RollbackConfig ist applied wieder leer: zurückgerollt heißt nichts übernommen.
+-- Read-only completion check, bound to the submitted config and requested non-skipped rows.
+-- CommitConfig(true) is acceptance, not completion; activeEntry includes staged selections.
+-- Require readiness, no staged changes, and matching entryIDsWithCommittedRanks. Trait events
+-- are deliberately not used as acknowledgements (see docs/trait-commit-contract.md).
+-- Never roll back or resubmit after acceptance: a newer manual edit may own the config.
+function folio_api.verify(result)
+  local pending = result.pending
+  if current_config_id() ~= pending.config_id then
+    return { applied = {}, skipped = result.skipped, reason = "commit_failed" }
+  end
+  if not C_Traits.IsReadyForCommit() or C_Traits.ConfigHasStagedChanges(pending.config_id) then return result end
+  for node_id, entry_id in pairs(pending.selections) do
+    local info = C_Traits.GetNodeInfo(pending.config_id, node_id)
+    local committed = info and info.entryIDsWithCommittedRanks
+    if not committed or #committed ~= 1 or committed[1] ~= entry_id then
+      return { applied = {}, skipped = result.skipped, reason = "commit_failed" }
+    end
+  end
+  return { applied = pending.changed, skipped = result.skipped }
+end
+
+-- result = { applied = {confirmed changed node IDs}, skipped = {{node_id, reason, entry_id, name?}},
+-- reason = nil | unavailable | busy | cannot_edit | commit_failed | pending, pending = token? }.
+-- Pending results have no applied nodes. Actions polls verify(), with a bounded timeout.
+-- Skip reasons: unknown | locked | unpurchased | rejected. Unknown entries have no name.
+-- Refuse pre-existing staged edits; only a synchronously rejected submission is rolled back.
 function folio_api.apply(selections)
   local result = { applied = {}, skipped = {} }
   local config_id = current_config_id()
@@ -103,17 +122,19 @@ function folio_api.apply(selections)
     result.reason = "busy"
     return result
   end
-  if not C_Traits.CanEditConfig(config_id) then
+  if not C_Traits.CanEditConfig(config_id) or C_Traits.ConfigHasStagedChanges(config_id) then
     result.reason = "cannot_edit"
     return result
   end
 
   local nodes = choice_nodes(config_id)
+  local expected = {}
   for _, node_id in ipairs(util.sorted_keys(selections)) do
     local outcome = apply_selection(config_id, nodes[node_id], node_id, selections[node_id])
-    if outcome == "applied" then
-      table.insert(result.applied, node_id)
-    elseif outcome ~= "unchanged" then
+    if outcome == "applied" or outcome == "unchanged" then
+      expected[node_id] = selections[node_id]
+      if outcome == "applied" then table.insert(result.applied, node_id) end
+    else
       local skip = { node_id = node_id, reason = outcome, entry_id = selections[node_id] }
       -- Bei "unknown" ist der entry_id im Baum nicht auffindbar - kein Name zu ermitteln.
       if outcome ~= "unknown" then
@@ -123,10 +144,17 @@ function folio_api.apply(selections)
     end
   end
 
-  if #result.applied > 0 and not C_Traits.CommitConfig(config_id) then
-    C_Traits.RollbackConfig(config_id)
-    result.reason = "commit_failed"
+  if #result.applied > 0 then
+    local changed = result.applied
     result.applied = {}
+    if not C_Traits.CommitConfig(config_id) then
+      C_Traits.RollbackConfig(config_id)
+      result.reason = "commit_failed"
+    else
+      result.reason = "pending"
+      result.pending = { config_id = config_id, selections = expected, changed = changed }
+      return folio_api.verify(result)
+    end
   end
   return result
 end

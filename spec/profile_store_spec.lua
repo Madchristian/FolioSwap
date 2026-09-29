@@ -13,12 +13,12 @@ describe("profile_store", function()
   end)
 
   it("legt fehlende Tabellen beim Init an", function()
-    assert.same({ version = 1, profiles = {}, active = {} }, store.init(nil))
+    assert.same({ version = 1, profiles = {}, active = {}, skin = env.ns.skin.normalize() }, store.init(nil))
   end)
 
   it("verwirft eine kaputte SavedVariables-Wurzel (falscher Typ) statt zu crashen", function()
     local fresh = wow_env.new().ns.profile_store
-    assert.same({ version = 1, profiles = {}, active = {} }, fresh.init("kaputt"))
+    assert.same({ version = 1, profiles = {}, active = {}, skin = env.ns.skin.normalize() }, fresh.init("kaputt"))
   end)
 
   it("behält vorhandene Daten beim Init", function()

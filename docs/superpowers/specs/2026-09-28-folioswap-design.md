@@ -2,6 +2,8 @@
 
 Stand: 2026-09-28 · WoW Retail 12.1.0 (Midnight)
 
+Commit-Vertrag für den ersten Release korrigiert: siehe [API-Nachweise und Abschlussprüfung](../../trait-commit-contract.md).
+
 ## Ziel
 
 FolioSwap stellt die Runen des Omniumfolianten (engl. *Omnium Folio*, intern
@@ -93,17 +95,24 @@ Codepfad:
 
 **FolioApi** – kapselt die Blizzard-API, sonst nichts.
 - `is_available()` → `true`, wenn eine configID für System 48 existiert
-- `read_current()` → `selections` des aktuellen Zustands (nur Auswahl-Nodes mit mehr als einem Eintrag)
+- `read_current()` → bestätigte `selections` aus `entryIDsWithCommittedRanks`, niemals nur gestagte Auswahl (nur Auswahl-Nodes mit mehr als einem Eintrag)
 - `catalog()` → `[node_id] = { entryID, ... }` aller Auswahl-Nodes, Grundlage für `/folio check`
 - `apply(selections)` → prüft vorab `IsReadyForCommit()`/`CanEditConfig()`, setzt jede abweichende
   Auswahl per `SetSelection` und committet einmal am Ende. Ergebnisvertrag:
   `{ applied = {node_id, ...}, skipped = {{node_id, reason, entry_id, name?}, ...},
-  reason = nil | "unavailable" | "busy" | "cannot_edit" | "commit_failed" }`. Skip-Gründe:
+  reason = nil | "unavailable" | "busy" | "cannot_edit" | "commit_failed" | "pending", pending = token? }`.
+  `applied` enthält nur bestätigte Änderungen; ein angenommener, noch unbestätigter Commit liefert
+  `pending` und ein leeres `applied`. Vorhandene gestagte Änderungen werden nicht mitgespeichert,
+  sondern mit `cannot_edit` abgewiesen. Skip-Gründe:
   `unknown | locked | unpurchased | rejected`; `entry_id` ist immer der gewünschte Eintrag, der
   Name der gewünschten Rune fehlt nur bei `unknown`. Schlägt `CommitConfig` fehl, rollt `apply`
   zurück – `applied` bleibt dann leer. Ein Tausch zwischen bereits belegten Einträgen ist auch bei
   `isAvailable = false` erlaubt; der Erstkauf eines unbelegten Nodes wird nie ungefragt ausgelöst.
-- `pending_changes(selections)` → nur lesend (kein `SetSelection`): die Nodes, für die `apply`
+- `verify(result)` → rein lesende Prüfung eines Pending-Ergebnisses: gleiche Config, bereit,
+  keine gestagten Änderungen und passende bestätigte Auswahl auf allen gewünschten, nicht
+  übersprungenen Reihen (auch bereits passenden). Erst dann `applied`; bei Config-Wechsel oder
+  abgeschlossenem abweichendem Zustand `commit_failed`. Keine Rollbacks nach Annahme.
+- `pending_changes(selections)` → nur lesend (kein `SetSelection`), anhand bestätigter Auswahl: die Nodes, für die `apply`
   tatsächlich einen Tausch versuchen würde (dieselbe Entscheidung wie `apply`, ohne den
   Seiteneffekt) – Grundlage für `Actions.needs_apply()`
 - `dump()` → alle Nodes/Entries des Baums mit Namen, für die Preset-Pflege
@@ -133,7 +142,17 @@ FolioSwapDB = {
 **Presets** – reine Datentabelle `[spec_id] = { profile, ... }` plus
 `validate(catalog)` (Katalog aus `FolioApi.catalog()`) für Tests und `/folio check`.
 
+**Actions** – gemeinsame Anwendung und Abschlussprüfung für manuell und automatisch.
+- Pending-Ergebnisse werden maximal 20-mal alle 0,5 Sekunden geprüft (nominal 10 Sekunden).
+  Danach `commit_timeout`: Abschluss unbestätigt, kein behaupteter Serverfehler und kein Erfolg.
+- Neue Anwendung, Spieler-Spec/Login-Ereignis, andere Spec oder geändertes/entferntes Profil
+  entwerten alte Rückmeldungen; automatische Prüfungen sind zusätzlich an die aktive Zuweisung gebunden.
+- Nach Annahme weder automatisch erneut senden noch zurückrollen: neuere manuelle Änderungen
+  dürfen nicht überschrieben werden. Erfolg/Fehler werden nicht allein aus Trait-Events abgeleitet.
+
 **SwapController** – verdrahtet Events, ruft dafür `Actions.apply_active()` auf.
+- Manuelles Anwenden sowie abgeschlossene/angenommene automatische Versuche entwerten alte
+  Retry-Callbacks und Kampf-Fortsetzungen; die folgenden Timer-Retries bleiben erhalten.
 - `PLAYER_SPECIALIZATION_CHANGED` (unit `player`) sowie `PLAYER_ENTERING_WORLD` nur bei
   `isInitialLogin` oder `isReloadingUi` → `request_apply()`, jeweils mit frischem Retry-Budget
   (Zähler auf 0)
@@ -172,7 +191,9 @@ Spec-Wechsel (`Bootstrap` ruft `refresh()`) und nach jeder Aktion, weil `Actions
 | vom Spiel abgelehnt (`rejected`) | Eintrag überspringen, mit Runennamen in der Meldung nennen |
 | nodeID/entryID nicht im Baum 1186 (`unknown`, Patch) | Eintrag überspringen, ohne Runennamen (unbekannt) |
 | Skips in der Automatik | dieselbe Kombination aus Profil (Quelle + Name) und Node/entryID/Grund wird nur einmal pro Sitzung gemeldet; manuell jedes Mal |
-| `CommitConfig` schlägt fehl (`commit_failed`) | Rollback, Fehlermeldung, `applied` bleibt leer |
+| `CommitConfig` gibt false zurück (`commit_failed`) | sofortiger Rollback, Fehlermeldung, `applied` bleibt leer |
+| angenommener Commit bleibt im abgeschlossenen Readback abweichend (`commit_failed`) | Fehlermeldung, kein nachträglicher Rollback/Retry, kein Erfolg |
+| Abschluss nach 20 Prüfungen offen (`commit_timeout`) | Hinweis auf unbestätigten Abschluss, kein Rollback/Retry; Runen vor neuem Versuch prüfen |
 | kein Profil für die Spec | nichts tun, keine Meldung |
 
 ## Tests

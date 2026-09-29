@@ -70,6 +70,7 @@ function profile_store.init(db)
   if type(db) ~= "table" then db = {} end
   db.version = db.version or DB_VERSION
   sanitize(db)
+  db.skin = ns.skin.normalize(db.skin)
   resolve_preset_collisions(db)
   profile_store.db = db
   return db

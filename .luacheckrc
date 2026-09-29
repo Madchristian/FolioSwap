@@ -8,7 +8,7 @@ globals = {
 read_globals = {
   "C_Traits", "C_Spell", "C_Timer", "CreateFrame", "GetLocale", "GetSpecialization", "GetSpecializationInfo",
   "InCombatLockdown", "hooksecurefunc", "StaticPopup_Show", "StaticPopup_StandardEditBoxOnEscapePressed",
-  "RunesOfPowerMixin", "ExpansionLandingPage", "ACCEPT", "CANCEL",
+  "RunesOfPowerMixin", "ExpansionLandingPage", "ACCEPT", "CANCEL", "UIParent", "UISpecialFrames",
 }
 
 files["spec/**"] = {

@@ -12,6 +12,15 @@ local TRANSIENT = { busy = true, unavailable = true }
 -- pending: im Kampf vorgemerkt. retries/retry_scheduled: laufender Timer-Retry bei busy/unavailable.
 local swap_controller = { pending = false, retries = 0, retry_scheduled = false }
 ns.swap_controller = swap_controller
+local retry_generation = 0
+
+-- Cancellation leaves already queued callbacks inert, including combat continuations.
+function swap_controller.cancel_retry()
+  retry_generation = retry_generation + 1
+  swap_controller.retry_scheduled = false
+  swap_controller.retries = 0
+  swap_controller.pending = false
+end
 
 swap_controller.EVENTS = {
   "PLAYER_ENTERING_WORLD", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_REGEN_ENABLED",
@@ -32,7 +41,9 @@ local function schedule_retry(reason)
   swap_controller.retries = swap_controller.retries + 1
   if swap_controller.retry_scheduled then return end
   swap_controller.retry_scheduled = true
+  local generation = retry_generation
   C_Timer.After(RETRY_DELAY, function()
+    if generation ~= retry_generation then return end
     swap_controller.retry_scheduled = false
     swap_controller.request_apply()
   end)
@@ -47,7 +58,7 @@ function swap_controller.request_apply()
     if TRANSIENT[reason] then
       schedule_retry(reason)
     else
-      swap_controller.retries = 0
+      swap_controller.cancel_retry()
     end
     return
   end
@@ -66,12 +77,14 @@ function swap_controller.on_event(event, ...)
   if event == "PLAYER_SPECIALIZATION_CHANGED" then
     local unit = ...
     if unit == "player" then
+      ns.actions.cancel_pending()
       swap_controller.retries = 0
       swap_controller.request_apply()
     end
   elseif event == "PLAYER_ENTERING_WORLD" then
     local is_login, is_reload = ...
     if is_login or is_reload then
+      ns.actions.cancel_pending()
       swap_controller.retries = 0
       swap_controller.request_apply()
     end

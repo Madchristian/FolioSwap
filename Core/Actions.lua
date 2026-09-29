@@ -8,6 +8,11 @@ local player = ns.player
 local reporter = ns.reporter
 
 -- Gemeinsame Anwendungsfälle für Slash-Befehle, Panel und Automatik.
+-- Completion is read-only and bounded independently of the controller's pre-submit retries.
+-- A timeout is uncertainty, not proof of rejection; never resubmit/rollback from this watcher.
+local COMMIT_POLL_DELAY = 0.5
+local MAX_COMMIT_POLLS = 20
+local apply_generation = 0
 local actions = {}
 ns.actions = actions
 
@@ -40,9 +45,45 @@ local function say_result(ok, err, success_text, name)
   return ok
 end
 
+function actions.cancel_pending()
+  apply_generation = apply_generation + 1
+end
+
 local function apply_profile(profile, verbose)
+  actions.cancel_pending()
+  local generation = apply_generation
+  local spec_id = player.current_spec_id()
+  profile = { name = profile.name, source = profile.source, selections = util.copy(profile.selections) }
   local result = folio_api.apply(profile.selections)
-  reporter.report_apply(profile, result, verbose)
+  local polls = 0
+  local function report_completion()
+    if generation ~= apply_generation or player.current_spec_id() ~= spec_id then return end
+    local current = profile_store.get(spec_id, profile.name)
+    if not current or current.source ~= profile.source then return end
+    for node_id, entry_id in pairs(profile.selections) do
+      if current.selections[node_id] ~= entry_id then return end
+    end
+    for node_id, entry_id in pairs(current.selections) do
+      if profile.selections[node_id] ~= entry_id then return end
+    end
+    if not verbose and profile_store.active_name(spec_id) ~= profile.name then return end
+    polls = polls + 1
+    result = folio_api.verify(result)
+    if result.pending and polls >= MAX_COMMIT_POLLS then
+      result = { applied = {}, skipped = result.skipped, reason = "commit_timeout" }
+    end
+    if result.pending then
+      C_Timer.After(COMMIT_POLL_DELAY, report_completion)
+    else
+      reporter.report_apply(profile, result, verbose)
+      refresh_panel()
+    end
+  end
+  if result.pending then
+    C_Timer.After(COMMIT_POLL_DELAY, report_completion)
+  else
+    reporter.report_apply(profile, result, verbose)
+  end
   return result
 end
 
@@ -50,6 +91,7 @@ actions.apply = with_profile_name(function(spec_id, name)
   if InCombatLockdown() then return reporter.say(L.in_combat) end
   local profile = profile_store.get(spec_id, name)
   if not profile then return reporter.say(L.not_found:format(name)) end
+  ns.swap_controller.cancel_retry()
   apply_profile(profile, true)
   refresh_panel()
 end)

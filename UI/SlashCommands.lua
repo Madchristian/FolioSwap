@@ -13,6 +13,7 @@ local HANDLERS = {
   dump = actions.dump,
   check = actions.check,
   help = actions.help,
+  skin = function() ns.skin_options.show() end,
 }
 
 function slash_commands.handle(input)

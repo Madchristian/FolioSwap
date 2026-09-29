@@ -57,6 +57,7 @@ end
 -- Ohne verbose (Automatik) bleiben "busy" und "unavailable" komplett still: der SwapController
 -- meldet sie erst selbst, wenn alle Wiederholungsversuche per Timer gescheitert sind.
 function reporter.report_apply(profile, result, verbose)
+  if result.reason == "pending" then return end
   if not verbose and (result.reason == "busy" or result.reason == "unavailable") then return end
   if result.reason == "unavailable" then return reporter.report_unavailable(true) end
   if #result.applied > 0 then
@@ -71,7 +72,7 @@ function reporter.report_apply(profile, result, verbose)
       reporter.say(L.skipped:format(#result.skipped, profile.name, describe_skipped(result.skipped)))
     end
   end
-  -- commit_failed, busy, cannot_edit: der Grund ist zugleich der Text-Schlüssel.
+  -- commit_failed, commit_timeout, busy, cannot_edit: Grund ist zugleich der Text-Schlüssel.
   if result.reason then
     reporter.say(L[result.reason])
   end

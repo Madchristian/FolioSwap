@@ -1,3 +1,5 @@
 .lua/
 .luarocks/
 .release/
+__pycache__/
+*.pyc

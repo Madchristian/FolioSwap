@@ -1,14 +1,29 @@
 # Changelog
 
-Alle nennenswerten Änderungen an diesem Projekt. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen nach CalVer (YYYY.M.D).
+Versions use CalVer (`YYYY.M.D`), without a `v` prefix.
 
-## [Unreleased]
+## [2026.9.29] - 2026-09-29
 
-### Added
-- Automatisches Umstellen des Omniumfolianten beim Spec-Wechsel, im Kampf vorgemerkt bis Kampfende
-- Eigene Profile pro Spezialisierung, accountweit gespeichert
-- Unterstützung für Guide-Presets (Daten folgen)
-- Profil-Leiste am Foliant-Fenster und Slash-Befehle `/folio`
-- Texte auf Deutsch und Englisch
-- Kauft nie ungefragt Runen in unbelegten Reihen; prüft Commit-Bereitschaft und rollt bei Fehlern zurück
-- Wiederholt das automatische Umstellen kurz, wenn das Spiel beschäftigt ist oder der Foliant beim Login noch lädt
+First release.
+
+### Features
+
+- Save account-wide Omnium Folio rune profiles separately for each specialization, including all four Druid specs.
+- Assign a profile to apply automatically on specialization changes or login. Apply another profile manually without changing that assignment.
+- Queue pending changes during combat and retry briefly while the game is busy or the Folio is loading. FolioSwap never purchases runes in rows you have not unlocked; make those initial choices in the Omnium Folio yourself.
+- Manage profiles in a compact panel below the Omnium Folio. Selecting a profile does not apply it.
+- Customize accent color, background opacity and panel scale with account-wide settings and a skin reset that preserves profiles.
+- Use English or German interface text and `/folio` commands for profile management.
+
+### Fixes and validation
+
+- Corrected skin-window layering so its controls remain visible above the background.
+- Confirm accepted rune changes through bounded timer-based committed-state readback before reporting success. Pending selections alone are not treated as saved; asynchronous failures and unconfirmed timeouts do not produce success messages.
+- Protect newer manual/spec/profile changes from stale completion reports and automatic retry callbacks. Save current reads committed runes, and pre-existing staged edits are not silently committed or discarded.
+- Earlier in-game functional and visual acceptance covered the UI and corrected skin layering. The completion-verification change requires a new focused in-game smoke; it has only been source-validated and regression-tested so far. No screenshots were requested or provided.
+
+### Limitations and license
+
+- Built-in guide presets are not included. Create profiles from your own rune selections.
+- Requires WoW Retail with the Omnium Folio available to the character; the package declares interface `120100`.
+- All Rights Reserved under [LICENSE](LICENSE). MIT rights previously granted for older versions remain in effect.

@@ -18,13 +18,23 @@ end
 function c_traits_mock.install(tree)
   local state = {
     set_calls = {}, commits = 0, commit_ok = true, reject = {},
-    ready = true, can_edit = true, rollbacks = 0,
+    ready = true, can_edit = true, rollbacks = 0, delayed = false,
   }
   local by_id, node_ids = {}, {}
   for _, node in ipairs(tree.nodes) do
-    by_id[node.id] = { id = node.id, entries = node.entries, active = node.active, available = node.available }
+    by_id[node.id] = { id = node.id, entries = node.entries, active = node.active,
+      committed = node.active, available = node.available }
     node_ids[#node_ids + 1] = node.id
   end
+
+  -- Server resolution is separate from SetSelection and CommitConfig acceptance.
+  function state.complete(success)
+    for _, node in pairs(by_id) do
+      if success then node.committed = node.active else node.active = node.committed end
+    end
+    state.ready = true
+  end
+  state.nodes = by_id
 
   C_Traits = {
     GetConfigIDBySystemID = function(system_id)
@@ -39,6 +49,7 @@ function c_traits_mock.install(tree)
       return {
         ID = node_id,
         entryIDs = node.entries,
+        entryIDsWithCommittedRanks = node.committed and { node.committed } or {},
         activeEntry = node.active and { entryID = node.active, rank = 1 } or nil,
         isAvailable = node.available ~= false,
       }
@@ -49,6 +60,13 @@ function c_traits_mock.install(tree)
     end,
     GetDefinitionInfo = function(definition_id)
       return { spellID = definition_id * 10 }
+    end,
+    ConfigHasStagedChanges = function(config_id)
+      assert(config_id == tree.config_id, "falsche config_id")
+      for _, node in pairs(by_id) do
+        if node.active ~= node.committed then return true end
+      end
+      return false
     end,
     IsReadyForCommit = function() return state.ready end,
     CanEditConfig = function(config_id)
@@ -65,11 +83,15 @@ function c_traits_mock.install(tree)
     CommitConfig = function(config_id)
       assert(config_id == tree.config_id, "falsche config_id")
       state.commits = state.commits + 1
+      if state.commit_ok then
+        if state.delayed then state.ready = false else state.complete(true) end
+      end
       return state.commit_ok
     end,
     RollbackConfig = function(config_id)
       assert(config_id == tree.config_id, "falsche config_id")
       state.rollbacks = state.rollbacks + 1
+      state.complete(false)
       return true
     end,
   }
