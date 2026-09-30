@@ -5,6 +5,7 @@ local frame = CreateFrame("Frame")
 local function on_addon_loaded(loaded_name)
   if loaded_name == addon_name then
     FolioSwapDB = ns.profile_store.init(FolioSwapDB)
+    ns.skin_options.register()
     for _, event in ipairs(ns.swap_controller.EVENTS) do
       frame:RegisterEvent(event)
     end

@@ -1,4 +1,13 @@
-# Flat-UI-Kandidat: Implementierung und Abnahme
+# UI-Abnahme
+
+**Stand 2026.9.30:** [Foliant-Abnahme](foliant-preview.md) dokumentiert die Variante A
+mit Flat-Alternative und eingebetteten WoW-Einstellungen. Der Benutzer hat den installierten,
+dreifach geprüften Kandidaten im Spiel abgenommen und den Release freigegeben.
+Die Bestätigung ist benutzerberichtet; Screenshots wurden nicht geprüft.
+Die folgende Dokumentation beschreibt ausschließlich den **früheren Flat-Kandidaten**
+und den damaligen Prüfstand; offene Schritte darin sind historische Angaben.
+
+# Früherer Flat-UI-Kandidat: Implementierung und Abnahme
 
 ## Umfang
 

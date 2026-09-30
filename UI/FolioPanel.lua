@@ -33,10 +33,12 @@ local function refresh()
   local profiles = spec_id and ns.profile_store.list(spec_id) or {}
   local active = spec_id and ns.profile_store.active_name(spec_id)
   w.active_label:SetText(L.panel_automatic .. ": " .. (active or L.panel_none))
+  w.active_label.assigned = active ~= nil
   local name = selected_or_active()
   local profile = name and ns.profile_store.get(spec_id, name)
   local placeholder = #profiles > 0 and L.panel_choose or L.no_profiles
   w.selector.label:SetText(profile and ns.reporter.profile_label(profile, active) or placeholder)
+  w.selector.assigned = profile ~= nil and name == active
   w.selector:SetEnabled(#profiles > 0)
   w.apply:SetEnabled(profile ~= nil)
   w.activate:SetEnabled(profile ~= nil)
@@ -106,7 +108,6 @@ StaticPopupDialogs[SAVE_POPUP] = {
 local function build(parent)
   panel = ui.surface(parent, nil, 520, 132, true)
   w.panel = panel
-  panel:SetPoint("TOP", parent, "BOTTOM", 0, -16)
   w.spec_icon = panel:CreateTexture(nil, "ARTWORK")
   w.spec_icon:SetSize(18, 18)
   w.spec_icon:SetPoint("TOPLEFT", 12, -10)
@@ -125,6 +126,7 @@ local function build(parent)
   w.selector.arrow = ui.label(w.selector, "v", 12)
   w.selector.arrow:SetPoint("RIGHT", -8, 0)
   w.apply = ui.button(panel, L.panel_apply, 84, on_selected(ns.actions.apply))
+  w.apply.primary = true
   w.save = ui.button(panel, L.panel_save, 110, function() StaticPopup_Show(SAVE_POPUP) end)
   w.delete = ui.button(panel, L.panel_delete, 74, on_selected(delete_selected))
   w.activate = ui.button(panel, L.panel_activate, 210, on_selected(ns.actions.set_active))
@@ -158,7 +160,8 @@ local function build(parent)
   panel:SetClampedToScreen(true)
   panel.layout = function()
     panel:ClearAllPoints()
-    panel:SetPoint("TOP", parent, "BOTTOM", 0, -16)
+    local gap = ns.skin.get().theme == "foliant" and 4 or 16
+    panel:SetPoint("TOP", parent, "BOTTOM", 0, -gap)
     ui.keep_on_screen(panel)
     w.menu:ClearAllPoints()
     w.menu:SetPoint("TOPLEFT", w.selector, "BOTTOMLEFT", 0, -4)

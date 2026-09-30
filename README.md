@@ -10,12 +10,21 @@ Open the Omnium Folio to manage your profiles in a compact panel below the game'
 - Assign an automatic profile to each spec, including all four Druid specializations.
 - Apply profiles manually without changing your automatic assignment.
 - Keep profile selection separate from applying runes: browsing the list does not change your setup.
-- Customize the panel's accent color, background opacity and scale.
+- Choose the Foliant skin or the original Flat style, with background opacity and scale controls.
+- Keep your saved accent color for Flat; changing styles does not change profiles or assignments.
 - Use the interface in English or German, selected automatically from your game language.
 
 If a change is pending during combat, FolioSwap waits until combat ends. It also retries briefly when the game is busy or the Folio has not finished loading.
 
 FolioSwap never purchases runes in rows you have not unlocked. Make those initial choices yourself in the Omnium Folio.
+
+## Appearance
+
+The warm, violet-framed **Foliant** style is the default.
+Open **Options → AddOns → FolioSwap** to switch to **Flat**. The **Skin** button and
+`/folio skin` open this same settings page, not a separate window. Existing accent, opacity and scale settings
+are retained; a skin reset restores Foliant at 98% background opacity and 100% scale.
+See [Foliant implementation and acceptance](docs/foliant-preview.md) for test scope.
 
 ## Getting started
 
@@ -33,7 +42,7 @@ Use **Apply** whenever you want to load a profile immediately. Choosing a profil
 - `/folio apply <name>`: apply a saved profile.
 - `/folio active <name>`: assign the automatic profile for your current spec.
 - `/folio delete <name>`: delete one of your own profiles.
-- `/folio skin`: customize the panel's appearance.
+- `/folio skin`: open Options → AddOns → FolioSwap to customize the panel's appearance.
 
 ## Requirements and limitations
 
@@ -54,7 +63,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes and [UI acceptance](docs/ui-a
 ```sh
 git clone https://github.com/Madchristian/FolioSwap.git
 cd FolioSwap
-git switch feature/v1   # until PR #1 is merged
+
 ```
 
 **Tests** – `scripts/test.sh` sets up Lua 5.1 locally (`.lua/`, via `uvx hererocks`) and runs luacheck and busted.
@@ -91,7 +100,7 @@ Preset maintenance: `/folio dump` and `/folio check`; see [docs/presets.md](docs
 Tags use CalVer `YYYY.M.D` without a `v` prefix. The TOC version token is expanded only in the package. To build and verify the local release candidate without publishing:
 
 ```sh
-python scripts/package_release.py 2026.9.29
+python scripts/package_release.py 2026.9.30
 python scripts/test_package_release.py
 ```
 

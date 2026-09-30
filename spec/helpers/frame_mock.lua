@@ -65,11 +65,17 @@ function mock.install()
   function frame:GetFrameLevel() return self.level or 1 end
   function frame:EnableMouse(value) self.mouse = value end
   function frame:GetParent() return self.parent end
+  -- SetGradient belongs to Texture, not FontString/Frame (Retail 12.1.0 TextureBase).
+  local texture = setmetatable({}, { __index = region })
+  function texture:SetGradient(orientation, low, high)
+    self.gradient = { orientation = orientation, low = low, high = high }
+  end
+  _G.CreateColor = function(r, g, b, a) return { r, g, b, a } end
   function frame.CreateTexture()
-    local t = setmetatable({ shown = true }, { __index = region })
+    local t = setmetatable({ shown = true }, { __index = texture })
     return t
   end
-  function frame:CreateFontString() return self:CreateTexture() end
+  function frame.CreateFontString() return setmetatable({ shown = true }, { __index = region }) end
   local button = setmetatable({}, { __index = frame })
   function button:SetEnabled(value)
     self.enabled = value
@@ -99,6 +105,25 @@ function mock.install()
   _G.UIParent = CreateFrame("Frame")
   UIParent:SetSize(1366, 768)
   _G.UISpecialFrames = {}
+  mock.categories, mock.opened = {}, {}
+  _G.Settings = {
+    RegisterCanvasLayoutCategory = function(canvas, name)
+      return { canvas = canvas, name = name, GetID = function() return 42 end }
+    end,
+    RegisterAddOnCategory = function(category)
+      mock.categories[#mock.categories + 1] = category
+    end,
+    OpenToCategory = function(id)
+      mock.opened[#mock.opened + 1] = id
+      local canvas = assert(mock.categories[1]).canvas
+      -- Blizzard besitzt Parent, Größe und Position des Canvas.
+      canvas.parent = UIParent
+      canvas:SetSize(700, 500)
+      canvas:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 100, -100)
+      canvas:Show()
+      mock.fire(canvas, "OnShow")
+    end,
+  }
   _G.hooksecurefunc = function() end
   _G.RunesOfPowerMixin = {}
   _G.ExpansionLandingPage = { Overlay = { MidnightLandingOverlay = {
