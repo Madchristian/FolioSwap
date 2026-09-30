@@ -2,6 +2,24 @@
 
 Versions use CalVer (`YYYY.M.D`), without a `v` prefix.
 
+## [2026.9.30] - 2026-09-30
+
+### Changed
+
+- Add the Foliant style as the default, retaining Flat and existing skin preferences.
+- Bring the Foliant panel closer to the Omnium Folio and distinguish the automatic
+  profile assignment from a profile selected for manual use.
+- Move appearance controls into WoW Options → AddOns → FolioSwap. The Skin button and
+  `/folio skin` open that category instead of a separate window. Panel scale does not resize
+  the settings page; changes apply immediately and skin reset preserves profiles.
+
+### Validation
+
+- The owner confirmed that the installed candidate works as expected in game.
+  This is user-reported acceptance; no screenshots were supplied or inspected.
+- Automated checks cover skin migration, profile retention, style controls and
+  Settings integration under Lua 5.1. Built-in guide presets are still not included.
+
 ## [2026.9.29] - 2026-09-29
 
 First release.

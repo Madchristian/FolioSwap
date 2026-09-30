@@ -16,9 +16,11 @@ end
 
 function skin.normalize(value)
   value = type(value) == "table" and value or {}
+  -- Additive Migration: gültige Altwerte bleiben erhalten; nur der Stil kommt hinzu.
   return {
+    theme = value.theme == "flat" and "flat" or "foliant",
     accent = type(value.accent) == "string" and skin.accents[value.accent] and value.accent or "teal",
-    opacity = number(value.opacity, 0.94, 0.65, 1),
+    opacity = number(value.opacity, 0.98, 0.65, 1),
     scale = number(value.scale, 1, 0.8, 1.25),
   }
 end
@@ -29,7 +31,7 @@ function skin.get()
 end
 
 function skin.set(key, value)
-  if key ~= "accent" and key ~= "opacity" and key ~= "scale" then return end
+  if key ~= "theme" and key ~= "accent" and key ~= "opacity" and key ~= "scale" then return end
   local db = ns.profile_store.db
   if not db then return end
   local candidate = ns.util.copy(db.skin)

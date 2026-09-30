@@ -2,9 +2,62 @@ local wow_env = require("spec.helpers.wow_env")
 local frames = require("spec.helpers.frame_mock")
 
 describe("flat widgets", function()
+  it("zeichnet Foliant-Verlauf, Innenkante und Gold/Violett-Zustände ohne Flat zu verändern", function()
+    local ns = wow_env.new().ns
+    frames.install()
+    local root = ns.flat_ui.surface(UIParent, nil, 520, 132, true)
+    local label = ns.flat_ui.label(root, "Heading", 100)
+    local b = ns.flat_ui.button(root, "Test", 120, function() end)
+    assert.is_table(root.surface.gradient)
+    assert.same({ 26/255, 24/255, 27/255, 0.98 }, root.surface.gradient.low)
+    assert.same({ 49/255, 39/255, 32/255, 0.98 }, root.surface.gradient.high)
+    assert.same({ 233/255, 222/255, 203/255, 1 }, label.text_color)
+    for _, edge in ipairs(root.border) do
+      assert.same({ 117/255, 96/255, 132/255, 1 }, edge.color)
+      assert.is_true(edge:IsShown())
+    end
+    assert.equals(4, #root.border)
+    assert.equals(4, #root.inner_border)
+    assert.is_true(root.shine:IsShown())
+    local normal = b.surface.gradient
+    frames.fire(b, "OnEnter")
+    assert.is_not.same(normal, b.surface.gradient)
+    assert.same({ 177/255, 156/255, 194/255, 1 }, b.border[1].color)
+    frames.fire(b, "OnLeave")
+    assert.same(normal, b.surface.gradient)
+    b.selected = true
+    ns.flat_ui.refresh()
+    assert.same({ 148/255, 120/255, 80/255, 1 }, b.border[1].color)
+    assert.same({ 213/255, 184/255, 126/255, 1 }, b.label.text_color)
+    b.selected, b.primary = false, true
+    ns.flat_ui.refresh()
+    assert.same({ 170/255, 135/255, 82/255, 1 }, b.border[1].color)
+    b:SetEnabled(false)
+    assert.same(normal, b.surface.gradient)
+    assert.same({ 0.4, 0.4, 0.4, 1 }, b.label.text_color)
+    assert.same({ 102/255, 84/255, 110/255, 0.3 }, b.border[1].color)
+    ns.skin.set("opacity", 0.65)
+    assert.equals(0.65, root.surface.gradient.low[4])
+    assert.equals(1, b.label.text_color[4])
+    local count = #ns.flat_ui.widgets
+    ns.skin.set("theme", "flat")
+    assert.same({ 0.055, 0.064, 0.078, 0.65 }, root.surface.color)
+    assert.same({ 1, 1, 1, 1 }, root.surface.gradient.low)
+    for _, edge in ipairs(root.border) do assert.is_false(edge:IsShown()) end
+    for _, edge in ipairs(root.inner_border) do assert.is_false(edge:IsShown()) end
+    assert.is_false(root.shine:IsShown())
+    assert.is_false(b.border[1]:IsShown())
+    assert.is_true(b.marker:IsShown())
+    ns.skin.set("theme", "foliant")
+    assert.is_false(b.marker:IsShown())
+    assert.equals(count, #ns.flat_ui.widgets)
+    assert.is_true(root.border[1]:IsShown())
+  end)
+
   it("zeichnet echte templatefreie Flächen und Hover/Selected/Disabled ohne Doppelclick", function()
     local ns = wow_env.new().ns
     frames.install()
+    ns.skin.set("theme", "flat")
     assert.is_table(ns.flat_ui)
     local calls = 0
     local b = ns.flat_ui.button(UIParent, "Test", 120, function() calls = calls + 1 end)

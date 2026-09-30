@@ -19,7 +19,7 @@ class PackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "candidate.zip"
             command = [sys.executable, str(ROOT / "scripts/package_release.py"),
-                       "2026.9.29", "--output", str(output)]
+                       "2026.9.30", "--output", str(output)]
             first = subprocess.run(command, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
             original = output.read_bytes()
@@ -29,11 +29,11 @@ class PackageTests(unittest.TestCase):
             with zipfile.ZipFile(output) as archive:
                 self.assertIsNone(archive.testzip())
                 self.assertEqual(len(archive.namelist()), 19)
-                self.assertIn(b"## Version: 2026.9.29", archive.read("FolioSwap/FolioSwap.toc"))
+                self.assertIn(b"## Version: 2026.9.30", archive.read("FolioSwap/FolioSwap.toc"))
                 self.assertEqual(archive.read("FolioSwap/LICENSE"), (ROOT / "LICENSE").read_bytes())
 
     def test_rejects_invalid_or_unrecorded_versions(self):
-        for version in ("v2026.9.29", "2026.09.29", "2026.2.30", "2026.9.30", "../../bad"):
+        for version in ("v2026.9.30", "2026.09.30", "2026.2.30", "2099.1.1", "../../bad"):
             with self.subTest(version=version), self.assertRaises(ValueError):
                 package.source_payload(version)
 

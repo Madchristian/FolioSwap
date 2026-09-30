@@ -8,11 +8,100 @@ local function setup()
   return env, env.ns.folio_panel
 end
 
-describe("flat folio panel", function()
+describe("folio panel", function()
+  it("dockt Foliant enger und trennt goldene Automatikzuordnung von bloßer Auswahl", function()
+    local env, panel = setup()
+    local ns, w = env.ns, panel.widgets
+    UIParent:SetSize(1366, 1600)
+    local parent = w.panel:GetParent()
+    parent:SetSize(600, 670)
+    parent:SetPoint("TOP", UIParent, "TOP", 0, -10)
+    frames.fire(w.panel, "OnUpdate")
+    assert.equals(4, parent:GetBottom() - w.panel:GetTop())
+    assert.same({ 520, 132 }, { w.panel:GetWidth(), w.panel:GetHeight() })
+    ns.actions.save_current("Alpha")
+    ns.actions.save_current("Beta")
+    ns.actions.set_active("Alpha")
+    assert.is_true(w.selector.assigned)
+    assert.matches(ns.L.active_marker, w.selector.label:GetText(), 1, true)
+    assert.same({ 148/255, 120/255, 80/255, 1 }, w.selector.border[1].color)
+    assert.same({ 213/255, 184/255, 126/255, 1 }, w.active_label.text_color)
+    assert.is_true(w.apply.primary)
+    assert.same({ 170/255, 135/255, 82/255, 1 }, w.apply.border[1].color)
+    frames.fire(w.selector, "OnClick")
+    frames.fire(w.rows[2], "OnClick")
+    assert.is_false(w.selector.assigned)
+    assert.same({ 102/255, 84/255, 110/255, 1 }, w.selector.border[1].color)
+    assert.equals("Alpha", ns.profile_store.active_name(62))
+    assert.is_true(w.rows[2].selected)
+    assert.matches("Alpha", w.active_label:GetText())
+    frames.fire(w.activate, "OnClick")
+    assert.is_true(w.selector.assigned)
+    ns.skin.set("theme", "flat")
+    assert.equals(16, parent:GetBottom() - w.panel:GetTop())
+    assert.same({ 0.105, 0.12, 0.145, 1 }, w.apply.surface.color)
+    assert.is_false(w.apply.border[1]:IsShown())
+    ns.skin.set("theme", "foliant")
+    assert.equals(4, parent:GetBottom() - w.panel:GetTop())
+    frames.fire(w.delete, "OnClick")
+    assert.is_false(w.selector.assigned)
+    assert.same({ 233/255, 222/255, 203/255, 1 }, w.active_label.text_color)
+    assert.is_false(w.apply:IsEnabled())
+  end)
+
+  it("wählt beide Stile lokalisiert ohne Profil-/Skinenverlust und setzt nur den Skin zurück", function()
+    for _, locale in ipairs({ "enUS", "deDE" }) do
+      local env = wow_env.new({ locale = locale })
+      frames.install()
+      assert(loadfile("UI/FolioPanel.lua"))("FolioSwap", env.ns)
+      env.ns.folio_panel.try_attach()
+      local ns, panel = env.ns, env.ns.folio_panel.widgets
+      ns.actions.save_current("Keep")
+      ns.actions.set_active("Keep")
+      ns.skin.set("accent", "violet")
+      ns.skin.set("opacity", 0.85)
+      ns.skin.set("scale", 1.25)
+      frames.fire(panel.skin, "OnClick")
+      local w = ns.skin_options.widgets
+      assert.is_table(w.themes)
+      assert.equals(locale == "deDE" and "Darstellung" or "Style", w.theme_label:GetText())
+      assert.equals("> Foliant", w.themes.foliant.label:GetText())
+      assert.equals("Flat", w.themes.flat.label:GetText())
+      assert.equals(ns.L.skin_accent_flat, w.accent_label:GetText())
+      assert.is_false(w.accents.violet:IsEnabled())
+      local count = #frames.frames
+      local profiles, active = ns.profile_store.db.profiles, ns.profile_store.db.active
+      local commits = env.traits.commits
+      frames.fire(w.themes.flat, "OnClick")
+      assert.equals("flat", ns.skin.get().theme)
+      assert.equals("> Flat", w.themes.flat.label:GetText())
+      assert.equals("Foliant", w.themes.foliant.label:GetText())
+      assert.is_true(w.accents.violet:IsEnabled())
+      assert.equals(0.73, w.themes.flat.marker.color[1])
+      assert.is_nil(w.root.surface)
+      frames.fire(w.accents.amber, "OnClick")
+      frames.fire(w.themes.foliant, "OnClick")
+      assert.equals("amber", ns.skin.get().accent)
+      assert.equals(0.85, ns.skin.get().opacity)
+      assert.equals(1.25, ns.skin.get().scale)
+      assert.is_nil(w.root.scale)
+      frames.fire(w.accents.teal, "OnClick")
+      assert.equals("amber", ns.skin.get().accent)
+      assert.equals(count, #frames.frames)
+      frames.fire(w.reset, "OnClick")
+      assert.same({ theme = "foliant", accent = "teal", opacity = 0.98, scale = 1 }, ns.skin.get())
+      assert.equals(profiles, ns.profile_store.db.profiles)
+      assert.equals(active, ns.profile_store.db.active)
+      assert.equals("Keep", ns.profile_store.active_name(62))
+      assert.equals(commits, env.traits.commits)
+    end
+  end)
+
   it("lädt TOC und gespeicherten Skin beim echten Bootstrap erneut", function()
     local env = wow_env.new()
     frames.install()
     local db = env.ns.profile_store.db
+    env.ns.skin.set("theme", "flat")
     env.ns.skin.set("accent", "amber")
     env.ns.skin.set("scale", 0.8)
     env.ns.profile_store.save(62, "Retained", { [100] = 1002 })
@@ -25,6 +114,7 @@ describe("flat folio panel", function()
     local bootstrap = frames.frames[#frames.frames]
     frames.fire(bootstrap, "OnEvent", "ADDON_LOADED", "FolioSwap")
     assert.equals(db, ns.profile_store.db)
+    assert.equals("flat", ns.skin.get().theme)
     assert.equals("amber", ns.skin.get().accent)
     assert.equals(0.8, ns.folio_panel.widgets.panel.scale)
     assert.same({ [100] = 1002 }, ns.profile_store.get(62, "Retained").selections)
@@ -33,7 +123,7 @@ describe("flat folio panel", function()
     local parent = ExpansionLandingPage.Overlay.MidnightLandingOverlay.RunesOfPowerFrame
     for _ = 1, 10 do frames.fire(parent, "OnShow") end
     assert.equals(count, #frames.frames)
-    assert.same({ "FolioSwapProfileMenu", "FolioSwapSkinOptions" }, UISpecialFrames)
+    assert.same({ "FolioSwapProfileMenu" }, UISpecialFrames)
   end)
 
   it("behält den vorhandenen automatischen Aktionspfad für vier echte Spec-IDs", function()
@@ -97,7 +187,7 @@ describe("flat folio panel", function()
         env.ns.skin_options.show()
         local options = env.ns.skin_options.widgets
         visible(options.root)
-        visible(options.close)
+
         visible(options.scale_plus)
         visible(options.reset)
         UIParent:SetSize(1366, 1600)
@@ -109,7 +199,62 @@ describe("flat folio panel", function()
     end
   end)
 
-  it("bounds settings after viewport changes and tolerates pending layout", function()
+  it("keeps both themes' controls reachable without overlap at locale and scale extremes", function()
+    for _, locale in ipairs({ "enUS", "deDE" }) do
+      local env = wow_env.new({ locale = locale })
+      frames.install()
+      UIParent:SetSize(1024, 768)
+      local parent = ExpansionLandingPage.Overlay.MidnightLandingOverlay.RunesOfPowerFrame
+      parent:SetSize(600, 670)
+      parent:SetPoint("TOP", UIParent, "TOP", 0, -10)
+      assert(loadfile("UI/FolioPanel.lua"))("FolioSwap", env.ns)
+      env.ns.folio_panel.try_attach()
+      for i = 1, 19 do env.ns.actions.save_current(string.format("Profile %02d", i)) end
+      env.ns.skin_options.show()
+      local w, options = env.ns.folio_panel.widgets, env.ns.skin_options.widgets
+      local function inside(f, root)
+        local s = f:GetEffectiveScale() / root:GetEffectiveScale()
+        assert.is_true(f:GetLeft() * s >= root:GetLeft() - 0.001)
+        assert.is_true(f:GetBottom() * s >= root:GetBottom() - 0.001)
+        assert.is_true(f:GetRight() * s <= root:GetRight() + 0.001)
+        assert.is_true(f:GetTop() * s <= root:GetTop() + 0.001)
+      end
+      local controls = { options.themes.flat, options.themes.foliant,
+        options.accents.teal, options.accents.blue, options.accents.violet, options.accents.amber,
+        options.opacity_minus, options.opacity_plus, options.scale_minus, options.scale_plus, options.reset }
+      local count = #frames.frames
+      for _, root_scale in ipairs({ 0.64, 1 }) do
+        UIParent:SetScale(root_scale)
+        for _, scale in ipairs({ 0.8, 1, 1.25 }) do
+          env.ns.skin.set("scale", scale)
+          for _, theme in ipairs({ "flat", "foliant" }) do
+            frames.fire(options.themes[theme], "OnClick")
+            inside(w.panel, UIParent)
+            inside(options.root, UIParent)
+            for _, b in ipairs({ w.selector, w.apply, w.save, w.delete, w.activate, w.skin }) do
+              inside(b, w.panel)
+            end
+            frames.fire(w.selector, "OnClick")
+            inside(w.menu, UIParent)
+            for _, b in ipairs(w.rows) do inside(b, w.menu) end
+            inside(w.previous, w.menu)
+            inside(w.next, w.menu)
+            for i, b in ipairs(controls) do
+              inside(b, options.root)
+              for j = i + 1, #controls do
+                local other = controls[j]
+                assert.is_true(b:GetRight() <= other:GetLeft() or b:GetLeft() >= other:GetRight()
+                  or b:GetTop() <= other:GetBottom() or b:GetBottom() >= other:GetTop(), "controls overlap")
+              end
+            end
+            assert.equals(count, #frames.frames)
+          end
+        end
+      end
+    end
+  end)
+
+  it("tolerates pending folio layout without taking ownership of the settings canvas", function()
     local env, panel = setup()
     local parent = panel.widgets.panel:GetParent()
     parent.unlaid = true
@@ -122,14 +267,12 @@ describe("flat folio panel", function()
     assert.is_true(panel.widgets.panel:GetBottom() >= 0)
     env.ns.skin_options.show()
     local root = env.ns.skin_options.widgets.root
-    root:ClearAllPoints()
-    root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 1300, -100)
+    local point = root.point
     for _, scale in ipairs({ 0.8, 1.25 }) do
       env.ns.skin.set("scale", scale)
-      frames.fire(root, "OnUpdate")
-      assert.is_true(root:GetBottom() >= 0)
-      assert.is_true(root:GetRight() * root:GetEffectiveScale() <= UIParent:GetWidth() + 0.001)
-      assert.is_true(root:GetTop() * root:GetEffectiveScale() <= UIParent:GetHeight() + 0.001)
+      assert.equals(point, root.point)
+      assert.is_nil(root.scripts.OnUpdate)
+      assert.is_nil(root.scale)
     end
   end)
 
@@ -205,6 +348,7 @@ describe("flat folio panel", function()
     assert.is_false(panel.widgets.menu:IsShown())
     local w = ns.skin_options.widgets
     assert.is_true(w.root:IsShown())
+    frames.fire(w.themes.flat, "OnClick")
     frames.fire(w.accents.violet, "OnClick")
     assert.equals("violet", ns.profile_store.db.skin.accent)
     assert.is_true(w.accents.violet.selected)
@@ -213,18 +357,18 @@ describe("flat folio panel", function()
     assert.equals(ns.skin.get().opacity, panel.widgets.panel.surface.color[4])
     frames.fire(w.scale_plus, "OnClick")
     assert.equals(1.05, panel.widgets.panel.scale)
-    assert.equals(1.05, w.root.scale)
+    assert.is_nil(w.root.scale)
     local count = #frames.frames
-    frames.fire(w.close, "OnClick")
+    w.root:Hide()
     assert.is_false(w.root:IsShown())
     for _ = 1, 10 do ns.slash_commands.handle("skin") end
     assert.is_true(w.root:IsShown())
     assert.equals(count, #frames.frames)
     frames.fire(w.reset, "OnClick")
-    assert.same({ accent = "teal", opacity = 0.94, scale = 1 }, ns.skin.get())
+    assert.same({ theme = "foliant", accent = "teal", opacity = 0.98, scale = 1 }, ns.skin.get())
   end)
 
-  it("öffnet Skin über dem Folianten auch nach Änderung seiner Fensterebene", function()
+  it("öffnet immer die WoW-Kategorie statt die Fensterebene des Folianten zu kopieren", function()
     local env, panel = setup()
     local host = panel.widgets.panel
     for _, strata in ipairs({ "DIALOG", "FULLSCREEN_DIALOG" }) do
@@ -232,9 +376,10 @@ describe("flat folio panel", function()
       host:SetFrameLevel(200)
       frames.fire(panel.widgets.skin, "OnClick")
       local root = env.ns.skin_options.widgets.root
-      assert.equals(host:GetFrameStrata(), root:GetFrameStrata())
-      assert.is_true(root:GetFrameLevel() > host:GetFrameLevel())
-      frames.fire(env.ns.skin_options.widgets.close, "OnClick")
+      assert.equals(env.ns.skin_options.category:GetID(), frames.opened[#frames.opened])
+      assert.is_nil(root.strata)
+      assert.is_nil(root.level)
+      root:Hide()
     end
   end)
 

@@ -16,7 +16,9 @@ describe("Locales", function()
   it("übersetzt alle Texte ins Deutsche", function()
     local en = wow_env.new().ns.L
     local de = wow_env.new({ locale = "deDE" }).ns.L
-    local same_in_both = { prefix = true, preset_marker = true, panel_skin = true }
+    local same_in_both = {
+      prefix = true, preset_marker = true, panel_skin = true, skin_foliant = true, skin_flat = true,
+    }
     for key, text in pairs(en) do
       if not same_in_both[key] then
         assert.are_not.equal(text, de[key], key)

@@ -14,7 +14,8 @@ Open the Omnium Folio to manage your profiles in a compact panel below the game'
 - Assign an automatic profile to each spec, including all four Druid specializations.
 - Apply profiles manually without changing your automatic assignment.
 - Keep profile selection separate from applying runes: browsing the list does not change your setup.
-- Customize the panel's accent color, background opacity and scale.
+- Choose Foliant or Flat, adjust background opacity and scale, and set an accent color for Flat.
+- Find appearance controls under Options → AddOns → FolioSwap.
 - Use the interface in English or German, selected automatically from your game language.
 
 If a change is pending during combat, FolioSwap waits until combat ends. It also retries briefly when the game is busy or the Folio has not finished loading.
@@ -37,7 +38,7 @@ Use **Apply** whenever you want to load a profile immediately. Choosing a profil
 - `/folio apply <name>`: apply a saved profile.
 - `/folio active <name>`: assign the automatic profile for your current spec.
 - `/folio delete <name>`: delete one of your own profiles.
-- `/folio skin`: customize the panel's appearance.
+- `/folio skin`: open Options → AddOns → FolioSwap to customize the panel's appearance.
 
 ## Requirements and limitations
 
